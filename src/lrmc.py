@@ -105,6 +105,12 @@ def initialize_missing_entries(
     estimate = np.array(partial, copy=True)
     if strategy.startswith("zero"):
         return estimate
+    if strategy.startswith("random"):
+        real_part = np.random.randn(*partial.shape)
+        imag_part = np.random.randn(*partial.shape)
+        random_fill = (real_part + 1j * imag_part) * (1 - mask)
+        estimate = np.where(mask > 0, estimate, random_fill)
+        return ensure_hermitian(estimate)
 
     virtual_size = partial.shape[0]
     lag_means: Dict[int, complex] = {}

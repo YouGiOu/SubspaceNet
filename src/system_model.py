@@ -61,6 +61,11 @@ class SystemModelParams:
     lrmc_rank = None  # Optional rank for LRMC experiments
     use_lrmc = False  # Whether to preprocess snapshots with LRMC
     lrmc_solver = "svd"  # Completion solver to use for LRMC path
+    lrmc_init_strategy = "lag"  # Initialization strategy for LRMC
+    lrmc_max_iter = 100  # Maximum LRMC iterations
+    lrmc_tol = 1e-6  # LRMC convergence tolerance
+    lrmc_epsilon = 1e-8  # Numerical floor for LRMC PSD projection
+    lrmc_enforce_toeplitz = False  # Whether to project onto Toeplitz matrices
     template_name = None  # Dataset template identifier
 
     def set_parameter(self, name: str, value):

@@ -1,0 +1,51 @@
+{
+  "description": "SubspaceNet on a 4-element ULA with LRMC disabled.",
+  "experiment_type": "subspacenet",
+  "methods": ["esprit", "root-music"],
+  "seed": 42,
+  "commands": {
+    "CREATE_DATA": true,
+    "LOAD_DATA": false,
+    "TRAIN_MODEL": true,
+    "EVALUATE_MODE": true
+  },
+  "system_model": {
+    "N": 4,
+    "M": 2,
+    "T": 200,
+    "snr": 10,
+    "signal_type": "NarrowBand",
+    "signal_nature": "non-coherent",
+    "eta": 0,
+    "bias": 0,
+    "sv_noise_var": 0,
+    "array_spacing": 0.5,
+    "doa_min": -90.0,
+    "doa_max": 90.0,
+    "doa_resolution": 0.01,
+    "min_doa_gap": 15.0,
+    "sensor_positions": [0, 1, 2, 3],
+    "virtual_array_size": 4,
+    "use_lrmc": false,
+    "lrmc_rank": 3,
+    "lrmc_solver": "svd",
+    "lrmc_init_strategy": "lag",
+    "lrmc_enforce_toeplitz": false
+  },
+  "model": {
+    "model_type": "SubspaceNet",
+    "tau": 8
+  },
+  "dataset": {
+    "samples_size": 4096,
+    "train_test_ratio": 0.2
+  },
+  "training": {
+    "batch_size": 64,
+    "epochs": 200,
+    "learning_rate": 5e-06,
+    "weight_decay": 1e-09,
+    "scheduler_step_size": 120,
+    "scheduler_gamma": 0.2
+  }
+}

@@ -656,3 +656,45 @@ class MVDR(MUSIC):
         response_curve = np.array(response_curve, dtype=complex)
         predictions = None
         return predictions, response_curve
+
+
+class DBF(MUSIC):
+    """
+    Conventional digital beamforming (Bartlett beamformer) for DOA estimation.
+    Inherits the angular grid and peak-picking logic from MUSIC.
+    """
+
+    def __init__(self, system_model: SystemModel):
+        super().__init__(system_model)
+
+    def narrowband(self, X: np.ndarray, mode: str = "sample", model: SubspaceNet = None):
+        """
+        Implementation of conventional narrowband digital beamforming.
+
+        Args:
+        -----
+            X (np.ndarray): Input samples matrix.
+            mode (str): Covariance calculation mode.
+            model: Optional SubspaceNet model when mode is "SubspaceNet".
+
+        Returns:
+        --------
+            predictions (np.ndarray): Predicted DOAs in degrees.
+            spectrum (np.ndarray): Bartlett response curve.
+            M (int): Number of sources.
+        """
+        M = self.system_model.params.M
+        covariance_mat = self.calculate_covariance(X=X, mode=mode, model=model)
+        spectrum = []
+        f = self.system_model.max_freq[self.system_model.params.signal_type]
+        for angle in self._angels:
+            steering = self.system_model.steering_vec(
+                theta=angle, f=f, array_form="ULA", nominal=True
+            ).reshape((self.system_model.params.N, 1))
+            response = np.real(np.conj(steering).T @ covariance_mat @ steering).item()
+            spectrum.append(response)
+        spectrum = np.asarray(spectrum, dtype=float)
+        doa_predictions = self.get_spectrum_peaks(spectrum)
+        predictions = self._angels[doa_predictions] * R2D
+        predictions = predictions[:M][::-1]
+        return predictions, spectrum, M

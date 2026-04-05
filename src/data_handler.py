@@ -63,6 +63,13 @@ def build_subspacenet_input(
             virtual_size=int(virtual_size),
             rank=int(rank),
             solver=getattr(system_model_params, "lrmc_solver", "svd"),
+            init_strategy=getattr(system_model_params, "lrmc_init_strategy", "lag"),
+            max_iter=int(getattr(system_model_params, "lrmc_max_iter", 100)),
+            tol=float(getattr(system_model_params, "lrmc_tol", 1e-6)),
+            epsilon=float(getattr(system_model_params, "lrmc_epsilon", 1e-8)),
+            enforce_toeplitz=bool(
+                getattr(system_model_params, "lrmc_enforce_toeplitz", False)
+            ),
         )
         if diagnostics.min_singular_value is not None and diagnostics.min_singular_value <= 0:
             raise AssertionError(
