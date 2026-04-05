@@ -1,0 +1,60 @@
+{
+  "description": "NULA + LRMC + SubspaceNet template with 1.9 lambda base spacing and narrow +/-15 degree field of view.",
+  "scenario_data_path": "nula_lrmc_spacing_1p9_fov15",
+  "commands": {
+    "SAVE_TO_FILE": false,
+    "CREATE_DATA": true,
+    "LOAD_DATA": false,
+    "LOAD_MODEL": false,
+    "TRAIN_MODEL": true,
+    "SAVE_MODEL": false,
+    "EVALUATE_MODE": true
+  },
+  "system_model": {
+    "N": 4,
+    "M": 2,
+    "T": 200,
+    "snr": 10,
+    "signal_type": "NarrowBand",
+    "signal_nature": "non-coherent",
+    "eta": 0,
+    "bias": 0,
+    "sv_noise_var": 0,
+    "array_spacing": 1.9,
+    "doa_min": -15.0,
+    "doa_max": 15.0,
+    "doa_resolution": 0.01,
+    "min_doa_gap": 5.0,
+    "sensor_positions": [
+      0,
+      1,
+      4,
+      8
+    ],
+    "virtual_array_size": 9,
+    "lrmc_rank": 3,
+    "use_lrmc": true,
+    "lrmc_solver": "svd"
+  },
+  "model": {
+    "model_type": "SubspaceNet",
+    "diff_method": "esprit",
+    "tau": 8
+  },
+  "dataset": {
+    "samples_size": 512,
+    "train_test_ratio": 0.2
+  },
+  "training": {
+    "batch_size": 64,
+    "epochs": 100,
+    "learning_rate": 1e-05,
+    "weight_decay": 1e-09,
+    "scheduler_step_size": 60,
+    "scheduler_gamma": 0.2
+  },
+  "evaluation": {
+    "disable_augmented_methods": true,
+    "disable_subspace_methods": true
+  }
+}

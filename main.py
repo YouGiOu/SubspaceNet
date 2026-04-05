@@ -34,6 +34,7 @@ from src.evaluation import evaluate
 from src.plotting import initialize_figures
 from pathlib import Path
 from src.models import ModelGenerator
+from src.dataset_template import load_dataset_template, build_system_model_params_from_template
 
 # Initialization
 warnings.simplefilter("ignore")
@@ -41,9 +42,11 @@ os.system("cls||clear")
 plt.close("all")
 
 if __name__ == "__main__":
+    dataset_template_name = "ula4_spacing_0p5_fov90"
     # Initialize paths
     external_data_path = Path.cwd() / "data"
-    scenario_data_path = "uniform_bias_spacing"
+    dataset_template = load_dataset_template(Path.cwd(), dataset_template_name)
+    scenario_data_path = dataset_template.get("scenario_data_path", dataset_template_name)
     datasets_path = external_data_path / "datasets" / scenario_data_path
     simulations_path = external_data_path / "simulations"
     saving_path = external_data_path / "weights"
@@ -59,15 +62,7 @@ if __name__ == "__main__":
     dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
     dt_string_for_save = now.strftime("%d_%m_%Y_%H_%M")
     # Operations commands
-    commands = {
-        "SAVE_TO_FILE": True,  # Saving results to file or present them over CMD
-        "CREATE_DATA": False,  # Creating new dataset
-        "LOAD_DATA": True,  # Loading data from exist dataset
-        "LOAD_MODEL": True,  # Load specific model for training
-        "TRAIN_MODEL": True,  # Applying training operation
-        "SAVE_MODEL": False,  # Saving tuned model
-        "EVALUATE_MODE": True,  # Evaluating desired algorithms
-    }
+    commands = dataset_template.get("commands", {})
     # Saving simulation scores to external file
     if commands["SAVE_TO_FILE"]:
         file_path = (
@@ -75,29 +70,22 @@ if __name__ == "__main__":
         )
         sys.stdout = open(file_path, "w")
     # Define system model parameters
-    system_model_params = (
-        SystemModelParams()
-        .set_parameter("N", 8)
-        .set_parameter("M", 3)
-        .set_parameter("T", 200)
-        .set_parameter("snr", 10)
-        .set_parameter("signal_type", "NarrowBand")
-        .set_parameter("signal_nature", "non-coherent")
-        .set_parameter("eta", 0)
-        .set_parameter("bias", 0.05)
-        .set_parameter("sv_noise_var", 0)
-    )
+    system_model_params = build_system_model_params_from_template(dataset_template)
+    model_settings = dataset_template.get("model", {})
     # Generate model configuration
     model_config = (
         ModelGenerator()
-        .set_model_type("SubspaceNet")
-        .set_diff_method("esprit")
-        .set_tau(8)
+        .set_model_type(model_settings.get("model_type", "SubspaceNet"))
+        .set_diff_method(model_settings.get("diff_method", "esprit"))
+        .set_tau(model_settings.get("tau", 8))
         .set_model(system_model_params)
     )
+    dataset_settings = dataset_template.get("dataset", {})
     # Define samples size
-    samples_size = 100000  # Overall dateset size
-    train_test_ratio = 0.05  # training and testing datasets ratio
+    samples_size = dataset_settings.get("samples_size", 100)  # Overall dataset size
+    train_test_ratio = dataset_settings.get(
+        "train_test_ratio", 0.2
+    )  # training and testing datasets ratio
     # Sets simulation filename
     simulation_filename = get_simulation_filename(
         system_model_params=system_model_params, model_config=model_config
@@ -107,6 +95,11 @@ if __name__ == "__main__":
     print("---------- New Simulation ----------")
     print("------------------------------------")
     print("date and time =", dt_string)
+    print("dataset template =", dataset_template_name)
+    runtime_device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    print("runtime device =", runtime_device)
+    if torch.cuda.is_available():
+        print("cuda device name =", torch.cuda.get_device_name(runtime_device))
     # Initialize seed
     set_unified_seed()
     # Datasets creation
@@ -157,15 +150,23 @@ if __name__ == "__main__":
 
     # Training stage
     if commands["TRAIN_MODEL"]:
+        training_settings = dataset_template.get("training", {})
         # Assign the training parameters object
         simulation_parameters = (
             TrainingParams()
-            .set_batch_size(2048)
-            .set_epochs(80)
+            .set_batch_size(training_settings.get("batch_size", 2048))
+            .set_epochs(training_settings.get("epochs", 80))
             .set_model(model=model_config)
-            .set_optimizer(optimizer="Adam", learning_rate=0.00001, weight_decay=1e-9)
+            .set_optimizer(
+                optimizer="Adam",
+                learning_rate=training_settings.get("learning_rate", 0.00001),
+                weight_decay=training_settings.get("weight_decay", 1e-9),
+            )
             .set_training_dataset(train_dataset)
-            .set_schedular(step_size=80, gamma=0.2)
+            .set_schedular(
+                step_size=training_settings.get("scheduler_step_size", 80),
+                gamma=training_settings.get("scheduler_gamma", 0.2),
+            )
             .set_criterion()
         )
         if commands["LOAD_MODEL"]:
@@ -256,6 +257,15 @@ if __name__ == "__main__":
             system_model=samples_model,
             figures=figures,
             plot_spec=False,
+            augmented_methods=[]
+            if dataset_template.get("evaluation", {}).get("disable_augmented_methods")
+            else None,
+            subspace_methods=[]
+            if dataset_template.get("evaluation", {}).get("disable_subspace_methods")
+            else None,
         )
     plt.show()
     print("end")
+
+
+

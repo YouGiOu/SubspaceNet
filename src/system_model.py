@@ -14,6 +14,7 @@ This script defines the SystemModel class for defining the settings of the DoA e
 # Imports
 import numpy as np
 from dataclasses import dataclass
+from typing import Optional, Sequence
 
 
 @dataclass
@@ -41,7 +42,7 @@ class SystemModelParams:
     """
 
     M = None  # Number of sources
-    N = None  # Number of sensors
+    N = None  # Number of physical sensors
     T = None  # Number of observations
     signal_type = "NarrowBand"  # Signal type ("NarrowBand" or "Broadband")
     freq_values = [0, 500]  # Frequency values for Broadband signal
@@ -50,6 +51,17 @@ class SystemModelParams:
     eta = 0  # Sensor location deviation
     bias = 0  # Sensor bias deviation
     sv_noise_var = 0  # Steering vector added noise variance
+    array_spacing = 0.5  # Base spacing in wavelength units for narrowband arrays
+    doa_min = -90.0  # Minimal sampled DOA in degrees
+    doa_max = 90.0  # Maximal sampled DOA in degrees
+    doa_resolution = 0.01  # Sampling resolution in degrees for random DOA generation
+    min_doa_gap = 15.0  # Minimal gap between sampled DOAs in degrees
+    sensor_positions: Optional[Sequence[float]] = None  # Explicit array geometry
+    virtual_array_size: Optional[int] = None  # Virtual ULA aperture size
+    lrmc_rank = None  # Optional rank for LRMC experiments
+    use_lrmc = False  # Whether to preprocess snapshots with LRMC
+    lrmc_solver = "svd"  # Completion solver to use for LRMC path
+    template_name = None  # Dataset template identifier
 
     def set_parameter(self, name: str, value):
         """
@@ -129,14 +141,29 @@ class SystemModel(object):
         }
         # distance between array elements
         self.dist = {
-            "NarrowBand": 1 / 2,
+            "NarrowBand": self.params.array_spacing,
             "Broadband": 1
             / (2 * (self.max_freq["Broadband"] - self.min_freq["Broadband"])),
         }
 
     def create_array(self):
         """create an array of sensors locations"""
-        self.array = np.linspace(0, self.params.N, self.params.N, endpoint=False)
+        sensor_positions = getattr(self.params, "sensor_positions", None)
+        if sensor_positions is not None:
+            sensor_positions = np.asarray(sensor_positions, dtype=float)
+            if sensor_positions.ndim != 1:
+                raise ValueError("SystemModel.create_array: sensor_positions must be 1D")
+            if len(sensor_positions) != self.params.N:
+                raise ValueError(
+                    "SystemModel.create_array: len(sensor_positions) must equal N"
+                )
+            if np.any(np.diff(sensor_positions) < 0):
+                raise ValueError(
+                    "SystemModel.create_array: sensor_positions must be non-decreasing"
+                )
+            self.array = sensor_positions
+        else:
+            self.array = np.linspace(0, self.params.N, self.params.N, endpoint=False)
 
     def steering_vec(
         self, theta: np.ndarray, f: float = 1, array_form="ULA", nominal=False

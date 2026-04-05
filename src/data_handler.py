@@ -36,8 +36,40 @@ from tqdm import tqdm
 from src.signal_creation import Samples
 from pathlib import Path
 from src.system_model import SystemModelParams
+from src.lrmc import complete_nula_covariance, covariance_to_autocorrelation_tensor
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+
+def build_subspacenet_input(
+    X: torch.Tensor,
+    system_model_params: SystemModelParams,
+    tau: int,
+):
+    """Builds the SubspaceNet input tensor for either ULA or NULA+LRMC paths."""
+    if getattr(system_model_params, "use_lrmc", False):
+        sensor_positions = getattr(system_model_params, "sensor_positions", None)
+        virtual_size = getattr(system_model_params, "virtual_array_size", None)
+        if sensor_positions is None or virtual_size is None:
+            raise ValueError(
+                "build_subspacenet_input: sensor_positions and virtual_array_size are required when use_lrmc=True"
+            )
+        rank = getattr(system_model_params, "lrmc_rank", None)
+        if rank is None:
+            rank = int(system_model_params.M) + 1
+        _, _, _, completed_covariance, diagnostics = complete_nula_covariance(
+            X=np.asarray(X.cpu().numpy(), dtype=np.complex128),
+            sensor_positions=sensor_positions,
+            virtual_size=int(virtual_size),
+            rank=int(rank),
+            solver=getattr(system_model_params, "lrmc_solver", "svd"),
+        )
+        if diagnostics.min_singular_value is not None and diagnostics.min_singular_value <= 0:
+            raise AssertionError(
+                "build_subspacenet_input: completed covariance is numerically unstable"
+            )
+        return covariance_to_autocorrelation_tensor(completed_covariance, tau)
+    return create_autocorrelation_tensor(X, tau).to(torch.float)
 
 
 def create_dataset(
@@ -109,8 +141,13 @@ def create_dataset(
                 dtype=torch.complex64,
             )
             if model_type.startswith("SubspaceNet"):
-                # Generate auto-correlation tensor
-                X_model = create_autocorrelation_tensor(X, tau).to(torch.float)
+                # Generate the model input tensor from either direct autocorrelation
+                # or NULA LRMC completed virtual covariance.
+                X_model = build_subspacenet_input(
+                    X=X,
+                    system_model_params=system_model_params,
+                    tau=tau,
+                )
             elif model_type.startswith("DeepCNN") and phase.startswith("test"):
                 # Generate 3d covariance parameters tensor
                 X_model = create_cov_tensor(X)
@@ -170,6 +207,28 @@ def read_data(path: str):
     assert isinstance(path, (str, Path))
     data = torch.load(path)
     return data
+
+
+def read_first_existing(paths):
+    """
+    Reads the first existing path from a list of candidate dataset paths.
+
+    Args:
+    -----
+        paths (list[Path]): Candidate paths to attempt.
+
+    Returns:
+    --------
+        torch.Tensor: The loaded data.
+
+    Raises:
+    -------
+        FileNotFoundError: If none of the candidate paths exists.
+    """
+    for path in paths:
+        if Path(path).exists():
+            return read_data(path)
+    raise FileNotFoundError(f"None of the candidate paths exist: {paths}")
 
 
 # def autocorrelation_matrix(X: torch.Tensor, lag: int) -> torch.Tensor:
@@ -277,50 +336,82 @@ def load_datasets(
     # Define test set size
     test_samples_size = int(train_test_ratio * samples_size)
     # Generate datasets filenames
-    model_dataset_filename = f"{model_type}_DataSet" + set_dataset_filename(
-        system_model_params, test_samples_size
+    model_dataset_filenames = get_dataset_filename_candidates(
+        f"{model_type}_DataSet", system_model_params, test_samples_size
     )
-    generic_dataset_filename = f"Generic_DataSet" + set_dataset_filename(
-        system_model_params, test_samples_size
+    generic_dataset_filenames = get_dataset_filename_candidates(
+        "Generic_DataSet", system_model_params, test_samples_size
     )
-    samples_model_filename = f"samples_model" + set_dataset_filename(
-        system_model_params, test_samples_size
+    samples_model_filenames = get_dataset_filename_candidates(
+        "samples_model", system_model_params, test_samples_size
     )
 
     # Whether to load the training dataset
     if is_training:
         # Load training dataset
         try:
-            model_trainingset_filename = f"{model_type}_DataSet" + set_dataset_filename(
-                system_model_params, samples_size
+            model_trainingset_filenames = get_dataset_filename_candidates(
+                f"{model_type}_DataSet", system_model_params, samples_size
             )
-            train_dataset = read_data(
-                datasets_path / "train" / model_trainingset_filename
+            train_dataset = read_first_existing(
+                [datasets_path / "train" / name for name in model_trainingset_filenames]
             )
             datasets.append(train_dataset)
         except:
             raise Exception("load_datasets: Training dataset doesn't exist")
     # Load test dataset
     try:
-        test_dataset = read_data(datasets_path / "test" / model_dataset_filename)
+        test_dataset = read_first_existing(
+            [datasets_path / "test" / name for name in model_dataset_filenames]
+        )
         datasets.append(test_dataset)
     except:
         raise Exception("load_datasets: Test dataset doesn't exist")
     # Load generic test dataset
     try:
-        generic_test_dataset = read_data(
-            datasets_path / "test" / generic_dataset_filename
+        generic_test_dataset = read_first_existing(
+            [datasets_path / "test" / name for name in generic_dataset_filenames]
         )
         datasets.append(generic_test_dataset)
     except:
         raise Exception("load_datasets: Generic test dataset doesn't exist")
     # Load samples models
     try:
-        samples_model = read_data(datasets_path / "test" / samples_model_filename)
+        samples_model = read_first_existing(
+            [datasets_path / "test" / name for name in samples_model_filenames]
+        )
         datasets.append(samples_model)
     except:
         raise Exception("load_datasets: Samples model dataset doesn't exist")
     return datasets
+
+
+def get_dataset_filename_candidates(
+    prefix: str, system_model_params: SystemModelParams, samples_size: float
+):
+    """
+    Returns supported dataset filename variants for backward compatibility.
+
+    Args:
+    -----
+        prefix (str): Dataset filename prefix.
+        system_model_params (SystemModelParams): an instance of SystemModelParams.
+        samples_size (float): The size of the overall dataset.
+
+    Returns:
+    --------
+        list[str]: Candidate filenames ordered from newest to legacy format.
+    """
+    filenames = [prefix + set_dataset_filename(system_model_params, samples_size)]
+    legacy_suffix_filename = (
+        f"_{system_model_params.signal_type}_"
+        + f"{system_model_params.signal_nature}_{samples_size}_M={system_model_params.M}_"
+        + f"N={system_model_params.N}_T={system_model_params.T}_SNR={system_model_params.snr}_"
+        + f"eta={system_model_params.eta}_sv_noise_var{system_model_params.sv_noise_var}_"
+        + ".h5"
+    )
+    filenames.append(prefix + legacy_suffix_filename)
+    return filenames
 
 
 def set_dataset_filename(system_model_params: SystemModelParams, samples_size: float):
@@ -341,6 +432,47 @@ def set_dataset_filename(system_model_params: SystemModelParams, samples_size: f
         + f"N={system_model_params.N}_T={system_model_params.T}_SNR={system_model_params.snr}_"
         + f"eta={system_model_params.eta}_sv_noise_var{system_model_params.sv_noise_var}_"
         + f"bias={system_model_params.bias}_"
+        + get_experiment_suffix(system_model_params)
         + ".h5"
     )
     return suffix_filename
+
+
+def get_experiment_suffix(system_model_params: SystemModelParams):
+    """Returns an optional suffix for non-default experiment metadata."""
+    suffix = ""
+    template_name = getattr(system_model_params, "template_name", None)
+    if template_name:
+        suffix += f"tpl={template_name}_"
+    sensor_positions = getattr(system_model_params, "sensor_positions", None)
+    if sensor_positions is not None:
+        geometry = "-".join(str(int(pos)) for pos in sensor_positions)
+        suffix += f"arr={geometry}_"
+    array_spacing = getattr(system_model_params, "array_spacing", None)
+    if array_spacing is not None:
+        suffix += f"d={array_spacing}_"
+    virtual_size = getattr(system_model_params, "virtual_array_size", None)
+    if virtual_size is not None:
+        suffix += f"v={virtual_size}_"
+    doa_min = getattr(system_model_params, "doa_min", None)
+    doa_max = getattr(system_model_params, "doa_max", None)
+    min_doa_gap = getattr(system_model_params, "min_doa_gap", None)
+    if doa_min is not None and doa_max is not None:
+        suffix += f"fov={doa_min}to{doa_max}_"
+    if min_doa_gap is not None:
+        suffix += f"gap={min_doa_gap}_"
+    if getattr(system_model_params, "use_lrmc", False):
+        rank = getattr(system_model_params, "lrmc_rank", None)
+        if rank is None:
+            rank = int(system_model_params.M) + 1
+        suffix += (
+            f"mc={getattr(system_model_params, 'lrmc_solver', 'svd')}_"
+            + f"r={rank}_"
+        )
+    # Keep Windows paths short enough for torch.save/open while preserving uniqueness.
+    if len(suffix) > 72:
+        import hashlib
+
+        digest = hashlib.sha1(suffix.encode("utf-8")).hexdigest()[:12]
+        suffix = f"tpl={template_name or 'exp'}_{digest}_"
+    return suffix

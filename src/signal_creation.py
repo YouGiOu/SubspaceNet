@@ -72,21 +72,28 @@ class Samples(SystemModel):
 
             """
             M = self.params.M
+            doa_min = getattr(self.params, "doa_min", -90.0)
+            doa_max = getattr(self.params, "doa_max", 90.0)
+            doa_resolution = getattr(self.params, "doa_resolution", 0.01)
+            decimals = max(0, int(np.ceil(-np.log10(doa_resolution)))) if doa_resolution < 1 else 0
             while True:
-                DOA = np.round(np.random.rand(M) * 180, decimals=2) - 90
+                DOA = np.round(
+                    np.random.uniform(low=doa_min, high=doa_max, size=M),
+                    decimals=decimals,
+                )
                 DOA.sort()
                 diff_angles = np.array(
                     [np.abs(DOA[i + 1] - DOA[i]) for i in range(M - 1)]
                 )
-                if (np.sum(diff_angles > gap) == M - 1) and (
-                    np.sum(diff_angles < (180 - gap)) == M - 1
-                ):
+                if np.sum(diff_angles > gap) == M - 1:
                     break
             return DOA
 
         if doa == None:
             # Generate angels with gap greater than 0.2 rad (nominal case)
-            self.doa = np.array(create_doa_with_gap(gap=15)) * D2R
+            self.doa = np.array(
+                create_doa_with_gap(gap=getattr(self.params, "min_doa_gap", 15.0))
+            ) * D2R
         else:
             # Generate
             self.doa = np.array(doa) * D2R

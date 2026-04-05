@@ -38,6 +38,7 @@ import copy
 from pathlib import Path
 import torch.optim as optim
 from datetime import datetime
+import re
 from torch.autograd import Variable
 from tqdm import tqdm
 from torch.optim import lr_scheduler
@@ -47,6 +48,7 @@ from src.criterions import *
 from src.system_model import SystemModel, SystemModelParams
 from src.models import SubspaceNet, DeepCNN, DeepAugmentedMUSIC, ModelGenerator
 from src.evaluation import evaluate_dnn_model
+from src.data_handler import get_experiment_suffix
 
 
 class TrainingParams(object):
@@ -181,7 +183,13 @@ class TrainingParams(object):
         self
         """
         # Load model from given path
-        self.model.load_state_dict(torch.load(loading_path, map_location=device))
+        if loading_path.exists():
+            resolved_path = loading_path
+        else:
+            legacy_filename = re.sub(r"_bias=[^_\\\/]+", "", str(loading_path))
+            legacy_path = Path(legacy_filename)
+            resolved_path = legacy_path if legacy_path.exists() else loading_path
+        self.model.load_state_dict(torch.load(resolved_path, map_location=device))
         return self
 
     def set_optimizer(self, optimizer: str, learning_rate: float, weight_decay: float):
@@ -538,5 +546,6 @@ def get_simulation_filename(
         + f"diff_method={model_config.diff_method}_"
         + f"{system_model_params.signal_nature}_eta={system_model_params.eta}_"
         + f"bias={system_model_params.bias}_"
+        + get_experiment_suffix(system_model_params)
         + f"sv_noise={system_model_params.sv_noise_var}"
     )

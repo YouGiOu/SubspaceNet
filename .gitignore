@@ -6,4 +6,7 @@ plot_style.txt
 plotting
 Figures
 src/__pycache__
-data
+data/*
+!data/dataset_templates/
+!data/dataset_templates/**/
+!data/dataset_templates/**/*.json
