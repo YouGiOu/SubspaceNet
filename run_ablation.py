@@ -15,6 +15,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
+from tqdm import tqdm
 
 from src.criterions import RMSPELoss
 from src.data_handler import create_dataset, load_datasets
@@ -234,7 +235,12 @@ def run_traditional_method(
 ):
     method = method_class(system_model)
     per_sample_rmse = []
-    for X, doa in generic_test_dataset:
+    progress = tqdm(
+        generic_test_dataset,
+        total=len(generic_test_dataset),
+        desc=f"{template['template_name']}::{method_name}",
+    )
+    for X, doa in progress:
         observations = np.asarray(X)
         doa_deg = np.asarray(doa) * R2D
         if method_name == "dbf":
@@ -286,6 +292,7 @@ def train_subspacenet_variant(
     result_dir: Path,
 ):
     seed = template.get("seed", 42)
+    print(f"Starting experiment {template['template_name']} / {method_name}")
     set_unified_seed(seed)
     template = copy.deepcopy(template)
     template["model"]["diff_method"] = "root_music" if method_name == "root-music" else method_name
@@ -360,6 +367,7 @@ def train_subspacenet_variant(
 
 def run_experiment(repo_root: Path, template: Dict, results_root: Path) -> List[Dict]:
     seed = template.get("seed", 42)
+    print(f"\nStarting experiment {template['template_name']}")
     set_unified_seed(seed)
     system_model_params = build_system_model_params_from_template(template)
     system_model_params.set_parameter("template_name", template["template_name"])
