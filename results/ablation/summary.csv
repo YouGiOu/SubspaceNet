@@ -1,0 +1,13 @@
+scheme,method,rmse_deg
+dbf_nula,dbf,11.728437096183358
+dbf_ula,dbf,18.780379977794322
+subspace_nula,music,0.6227929622318448
+subspace_nula,esprit,30.086039744210435
+subspace_nula,r-music,31.817462031988246
+subspace_ula,music,1.749395560966244
+subspace_ula,esprit,0.7453051103906126
+subspace_ula,r-music,0.7314563405832596
+subspacenet_nula,esprit,2.1333657494457556
+subspacenet_nula,root-music,2.8637817054393815
+subspacenet_ula,esprit,4.012851934187981
+subspacenet_ula,root-music,6.027697655798927

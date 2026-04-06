@@ -446,6 +446,52 @@ def write_summary(results: List[Dict], results_root: Path):
         )
 
 
+def write_paper_table1_markdown(results: List[Dict], results_root: Path):
+    paper_results = [
+        item
+        for item in results
+        if item["scheme"] in {"paper_table1_subspace_ula", "paper_table1_subspacenet_ula"}
+    ]
+    if not paper_results:
+        return
+
+    order = {
+        ("paper_table1_subspace_ula", "music"): "MUSIC",
+        ("paper_table1_subspace_ula", "r-music"): "Root-MUSIC",
+        ("paper_table1_subspace_ula", "esprit"): "ESPRIT",
+        ("paper_table1_subspacenet_ula", "root-music"): "SubspaceNet + Root-MUSIC",
+        ("paper_table1_subspacenet_ula", "esprit"): "SubspaceNet + ESPRIT",
+    }
+    lines = [
+        "# Paper Table I Reproduction",
+        "",
+        "Experimental conditions:",
+        "- Array: ULA, 4 elements, 0.5 lambda spacing",
+        "- Signals: 2 coherent narrowband sources",
+        "- Snapshots: T = 100",
+        "- SNR: 10 dB",
+        "- DOA range: [-90 deg, 90 deg]",
+        "- Minimum separation: 15 deg",
+        "- SubspaceNet tau: 3",
+        "- Metric: DOA RMSE in degrees (periodic matching)",
+        "",
+        "| Algorithm | RMSE (deg) |",
+        "| --- | ---: |",
+    ]
+    sorted_results = sorted(
+        paper_results,
+        key=lambda item: list(order.keys()).index((item["scheme"], item["method"]))
+        if (item["scheme"], item["method"]) in order
+        else 999,
+    )
+    for item in sorted_results:
+        label = order.get((item["scheme"], item["method"]), f"{item['scheme']} / {item['method']}")
+        lines.append(f"| {label} | {item['rmse_deg']:.4f} |")
+
+    output_path = results_root / "paper_table1_results.md"
+    output_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
 def main():
     args = parse_args()
     repo_root = Path(__file__).resolve().parent
@@ -475,6 +521,7 @@ def main():
         all_results.extend(run_experiment(repo_root, template, results_root))
 
     write_summary(all_results, results_root)
+    write_paper_table1_markdown(all_results, results_root)
 
 
 if __name__ == "__main__":

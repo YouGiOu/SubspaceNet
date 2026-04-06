@@ -1,0 +1,6 @@
+{
+  "template_name": "dbf_nula",
+  "method_name": "dbf",
+  "rmse_deg": 11.728437096183358,
+  "num_test_samples": 819
+}
