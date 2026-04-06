@@ -1,0 +1,6 @@
+{
+  "template_name": "paper_table1_subspace_ula",
+  "method_name": "esprit",
+  "rmse_deg": 25.505929831607503,
+  "num_test_samples": 819
+}

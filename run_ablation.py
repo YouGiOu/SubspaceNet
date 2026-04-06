@@ -35,6 +35,20 @@ TRADITIONAL_METHODS = {
 }
 
 
+PAPER_MARKDOWN_LABELS = {
+    ("paper_table1_subspace_ula", "music"): "MUSIC",
+    ("paper_table1_subspace_ula", "r-music"): "Root-MUSIC",
+    ("paper_table1_subspace_ula", "esprit"): "ESPRIT",
+    ("paper_table1_subspacenet_ula", "root-music"): "SubspaceNet + Root-MUSIC",
+    ("paper_table1_subspacenet_ula", "esprit"): "SubspaceNet + ESPRIT",
+    ("paper_table1_subspace_nula_lrmc", "music"): "LRMC + MUSIC",
+    ("paper_table1_subspace_nula_lrmc", "r-music"): "LRMC + Root-MUSIC",
+    ("paper_table1_subspace_nula_lrmc", "esprit"): "LRMC + ESPRIT",
+    ("paper_table1_subspacenet_nula", "root-music"): "LRMC + SubspaceNet + Root-MUSIC",
+    ("paper_table1_subspacenet_nula", "esprit"): "LRMC + SubspaceNet + ESPRIT",
+}
+
+
 def parse_args():
     parser = argparse.ArgumentParser(description="Run DOA ablation experiments.")
     parser.add_argument(
@@ -238,6 +252,7 @@ def run_traditional_method(
     template: Dict,
 ):
     method = method_class(system_model)
+    method_mode = "lrmc" if template.get("system_model", {}).get("use_lrmc", False) else "sample"
     per_sample_rmse = []
     progress = tqdm(
         generic_test_dataset,
@@ -248,16 +263,16 @@ def run_traditional_method(
         observations = np.asarray(X)
         doa_deg = np.asarray(doa) * R2D
         if method_name == "dbf":
-            predictions, spectrum, _ = method.narrowband(observations, mode="sample")
+            predictions, spectrum, _ = method.narrowband(observations, mode=method_mode)
         elif method_name == "music":
-            predictions, spectrum, _ = method.narrowband(observations, mode="sample")
+            predictions, spectrum, _ = method.narrowband(observations, mode=method_mode)
         elif method_name in {"r-music", "root-music"}:
             predictions, roots, predictions_all, roots_angles, _ = method.narrowband(
-                observations, mode="sample"
+                observations, mode=method_mode
             )
             spectrum = None
         elif method_name == "esprit":
-            predictions, _ = method.narrowband(observations, mode="sample")
+            predictions, _ = method.narrowband(observations, mode=method_mode)
             spectrum = None
         else:
             raise ValueError(f"Unsupported traditional method: {method_name}")
@@ -450,50 +465,54 @@ def write_summary(results: List[Dict], results_root: Path):
         )
 
 
-def write_paper_table1_markdown(results: List[Dict], results_root: Path):
-    paper_results = [
-        item
-        for item in results
-        if item["scheme"] in {"paper_table1_subspace_ula", "paper_table1_subspacenet_ula"}
-    ]
-    if not paper_results:
-        return
+def write_configured_markdowns(results: List[Dict], selected_templates: List[Dict], results_root: Path):
+    markdown_groups = {}
+    for template in selected_templates:
+        report = template.get("report", {})
+        output_name = report.get("markdown_output")
+        if not output_name:
+            continue
+        group = markdown_groups.setdefault(
+            output_name,
+            {
+                "title": report.get("markdown_title", template["template_name"]),
+                "description": report.get("markdown_description", ""),
+                "conditions": report.get("markdown_conditions", []),
+                "schemes": [],
+            },
+        )
+        group["schemes"].append(template["template_name"])
 
-    order = {
-        ("paper_table1_subspace_ula", "music"): "MUSIC",
-        ("paper_table1_subspace_ula", "r-music"): "Root-MUSIC",
-        ("paper_table1_subspace_ula", "esprit"): "ESPRIT",
-        ("paper_table1_subspacenet_ula", "root-music"): "SubspaceNet + Root-MUSIC",
-        ("paper_table1_subspacenet_ula", "esprit"): "SubspaceNet + ESPRIT",
-    }
-    lines = [
-        "# Paper Table I Reproduction",
-        "",
-        "Experimental conditions:",
-        "- Array: ULA, 4 elements, 0.5 lambda spacing",
-        "- Signals: 2 coherent narrowband sources",
-        "- Snapshots: T = 100",
-        "- SNR: 10 dB",
-        "- DOA range: [-90 deg, 90 deg]",
-        "- Minimum separation: 15 deg",
-        "- SubspaceNet tau: 3",
-        "- Metric: DOA RMSE in degrees (periodic matching)",
-        "",
-        "| Algorithm | RMSE (deg) |",
-        "| --- | ---: |",
-    ]
-    sorted_results = sorted(
-        paper_results,
-        key=lambda item: list(order.keys()).index((item["scheme"], item["method"]))
-        if (item["scheme"], item["method"]) in order
-        else 999,
-    )
-    for item in sorted_results:
-        label = order.get((item["scheme"], item["method"]), f"{item['scheme']} / {item['method']}")
-        lines.append(f"| {label} | {item['rmse_deg']:.4f} |")
-
-    output_path = results_root / "paper_table1_results.md"
-    output_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    for output_name, config in markdown_groups.items():
+        group_results = [item for item in results if item["scheme"] in config["schemes"]]
+        if not group_results:
+            continue
+        lines = [f"# {config['title']}", ""]
+        if config["description"]:
+            lines.extend([config["description"], ""])
+        if config["conditions"]:
+            lines.append("Experimental conditions:")
+            for condition in config["conditions"]:
+                lines.append(f"- {condition}")
+            lines.append("")
+        lines.extend([
+            "| Algorithm | RMSE (deg) |",
+            "| --- | ---: |",
+        ])
+        sorted_results = sorted(
+            group_results,
+            key=lambda item: PAPER_MARKDOWN_LABELS.get(
+                (item["scheme"], item["method"]), f"{item['scheme']} / {item['method']}"
+            ),
+        )
+        for item in sorted_results:
+            label = PAPER_MARKDOWN_LABELS.get(
+                (item["scheme"], item["method"]),
+                f"{item['scheme']} / {item['method']}",
+            )
+            lines.append(f"| {label} | {item['rmse_deg']:.4f} |")
+        output_path = results_root / output_name
+        output_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 def main():
@@ -524,8 +543,13 @@ def main():
     for template in selected_templates:
         all_results.extend(run_experiment(repo_root, template, results_root))
 
-    write_summary(all_results, results_root)
-    write_paper_table1_markdown(all_results, results_root)
+    should_write_summary = any(
+        template.get("report", {}).get("write_summary_csv", False)
+        for template in selected_templates
+    )
+    if should_write_summary:
+        write_summary(all_results, results_root)
+    write_configured_markdowns(all_results, selected_templates, results_root)
 
 
 if __name__ == "__main__":

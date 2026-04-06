@@ -48,8 +48,10 @@ Methods:
 """
 
 # Imports
+import copy
 import numpy as np
 import scipy
+from src.lrmc import complete_nula_covariance
 from src.models import SubspaceNet
 from src.system_model import SystemModel
 from src.utils import sum_of_diag, find_roots, R2D
@@ -84,6 +86,27 @@ class SubspaceMethod(object):
             system_model: An instance of the SystemModel class.
         """
         self.system_model = system_model
+        self.virtual_system_model = self._build_virtual_system_model(system_model)
+
+    def _build_virtual_system_model(self, system_model: SystemModel):
+        """Builds a virtual ULA model for LRMC-completed covariance processing."""
+        virtual_size = getattr(system_model.params, "virtual_array_size", None)
+        if not getattr(system_model.params, "use_lrmc", False):
+            return None
+        if virtual_size is None:
+            return None
+        params = copy.deepcopy(system_model.params)
+        params.set_parameter("N", virtual_size)
+        params.set_parameter("sensor_positions", list(range(virtual_size)))
+        params.set_parameter("use_lrmc", False)
+        params.set_parameter("virtual_array_size", virtual_size)
+        return SystemModel(params)
+
+    def get_processing_model(self, mode: str):
+        """Returns the appropriate array model for the selected covariance mode."""
+        if mode.startswith("lrmc") and self.virtual_system_model is not None:
+            return self.virtual_system_model
+        return self.system_model
 
     def calculate_covariance(
         self, X: np.ndarray, mode: str = "sample", model: SubspaceNet = None
@@ -170,10 +193,30 @@ class SubspaceMethod(object):
             covariance_mat = np.array(covariance_mat.squeeze())
             return covariance_mat
 
+        def lrmc_covariance(X: np.ndarray):
+            """Calculates covariance via LRMC-completed virtual ULA covariance."""
+            _, _, _, completed_covariance, _ = complete_nula_covariance(
+                X=np.asarray(X),
+                sensor_positions=self.system_model.params.sensor_positions,
+                virtual_size=self.system_model.params.virtual_array_size,
+                rank=self.system_model.params.lrmc_rank,
+                solver=self.system_model.params.lrmc_solver,
+                init_strategy=getattr(self.system_model.params, "lrmc_init_strategy", "lag"),
+                max_iter=getattr(self.system_model.params, "lrmc_max_iter", 100),
+                tol=getattr(self.system_model.params, "lrmc_tol", 1e-6),
+                epsilon=getattr(self.system_model.params, "lrmc_epsilon", 1e-8),
+                enforce_toeplitz=getattr(
+                    self.system_model.params, "lrmc_enforce_toeplitz", False
+                ),
+            )
+            return completed_covariance
+
         if mode.startswith("spatial_smoothing"):
             return spatial_smoothing_covariance(X)
         elif mode.startswith("SubspaceNet"):
             return subspacnet_covariance(X, model)
+        elif mode.startswith("lrmc"):
+            return lrmc_covariance(X)
         elif mode.startswith("sample"):
             return np.cov(X)
         else:
@@ -246,7 +289,11 @@ class MUSIC(SubspaceMethod):
         self._angels = np.linspace(-1 * np.pi / 2, np.pi / 2, 18000, endpoint=False)
 
     def spectrum_calculation(
-        self, Un: np.ndarray, f: float = 1, array_form: str = "ULA"
+        self,
+        Un: np.ndarray,
+        f: float = 1,
+        array_form: str = "ULA",
+        system_model: SystemModel = None,
     ):
         """
         Calculates the MUSIC spectrum and the core equation for DOA estimation,
@@ -264,10 +311,11 @@ class MUSIC(SubspaceMethod):
             core_equation (np.ndarray): Core equation.
         """
         core_equation = []
+        system_model = system_model or self.system_model
         # Run over all angels in grid
         for angle in self._angels:
             # Calculate the steered vector to angle
-            a = self.system_model.steering_vec(theta=angle, f=f, array_form=array_form, nominal = True)[
+            a = system_model.steering_vec(theta=angle, f=f, array_form=array_form, nominal = True)[
                 : Un.shape[0]
             ]
             # Calculate the core equation element
@@ -388,13 +436,14 @@ class MUSIC(SubspaceMethod):
             pass
         # Calculate covariance matrix
         covariance_mat = self.calculate_covariance(X=X, mode=mode, model=model)
+        processing_model = self.get_processing_model(mode)
         # Get noise subspace
         Un, _ = self.subspace_separation(covariance_mat=covariance_mat, M=M)
         # TODO: Check if this condition is hold after the change
         # Assign the frequency for steering vector calculation (multiplied in self.dist to get dist = 1/2)
-        f = self.system_model.max_freq[self.system_model.params.signal_type]
+        f = processing_model.max_freq[processing_model.params.signal_type]
         # Generate the MUSIC spectrum
-        spectrum, _ = self.spectrum_calculation(Un, f=f)
+        spectrum, _ = self.spectrum_calculation(Un, f=f, system_model=processing_model)
         # Find spectrum peaks
         doa_predictions = self.get_spectrum_peaks(spectrum)
         # Associate predictions to angels
@@ -627,6 +676,7 @@ class MVDR(MUSIC):
         response_curve = []
         # Calculate covariance matrix
         covariance_mat = self.calculate_covariance(X=X, mode=mode, model=model)
+        processing_model = self.get_processing_model(mode)
         # Diagonal Loading
         diagonal_loaded_covariance = covariance_mat + eps * np.trace(
             covariance_mat
@@ -635,12 +685,12 @@ class MVDR(MUSIC):
         inv_covariance = np.linalg.inv(diagonal_loaded_covariance)
         # TODO: Check if this condition is hold after the change
         # Assign the frequency for steering vector calculation (multiplied in self.dist to get dist = 1/2)
-        f = self.system_model.max_freq[self.system_model.params.signal_type]
+        f = processing_model.max_freq[processing_model.params.signal_type]
         for angle in self._angels:
             # Calculate the steering vector
-            a = self.system_model.steering_vec(
+            a = processing_model.steering_vec(
                 theta=angle, f=f, array_form="ULA",
-                nominal=True).reshape((self.system_model.params.N, 1))
+                nominal=True).reshape((processing_model.params.N, 1))
             # Adaptive calculation of optimal_weights
             optimal_weights = (inv_covariance @ a) / (np.conj(a).T @ inv_covariance @ a)
             # Calculate beamformer gain at specific angle
@@ -685,12 +735,13 @@ class DBF(MUSIC):
         """
         M = self.system_model.params.M
         covariance_mat = self.calculate_covariance(X=X, mode=mode, model=model)
+        processing_model = self.get_processing_model(mode)
         spectrum = []
-        f = self.system_model.max_freq[self.system_model.params.signal_type]
+        f = processing_model.max_freq[processing_model.params.signal_type]
         for angle in self._angels:
-            steering = self.system_model.steering_vec(
+            steering = processing_model.steering_vec(
                 theta=angle, f=f, array_form="ULA", nominal=True
-            ).reshape((self.system_model.params.N, 1))
+            ).reshape((processing_model.params.N, 1))
             response = np.real(np.conj(steering).T @ covariance_mat @ steering).item()
             spectrum.append(response)
         spectrum = np.asarray(spectrum, dtype=float)

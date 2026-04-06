@@ -56,19 +56,6 @@
     "scheduler_step_size": 120,
     "scheduler_gamma": 0.2
   },
-  "report": {
-    "markdown_output": "ula_table1_results.md",
-    "markdown_title": "Paper Table I Reproduction - ULA",
-    "markdown_description": "Reproduction of the ULA portion of Paper Table I.",
-    "markdown_conditions": [
-      "Array: ULA, 4 elements, 0.5 lambda spacing",
-      "Signals: 2 coherent narrowband sources",
-      "Snapshots: T = 100",
-      "SNR: 10 dB",
-      "DOA range: [-90 deg, 90 deg]",
-      "Minimum separation: 15 deg",
-      "SubspaceNet tau: 3",
-      "Metric: DOA RMSE in degrees (periodic matching)"
-    ]
-  }
+  "template_name": "paper_table1_subspacenet_ula",
+  "template_path": "/root/autodl-tmp/SubspaceNet/data/dataset_templates/ablation/paper_table1_subspacenet_ula.json"
 }

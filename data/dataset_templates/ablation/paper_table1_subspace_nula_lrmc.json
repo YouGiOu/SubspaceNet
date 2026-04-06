@@ -1,5 +1,5 @@
 {
-  "description": "Paper Table I reproduction: traditional subspace methods on a 4-element ULA with coherent narrowband sources.",
+  "description": "Paper Table I reproduction: traditional subspace methods on NULA [0,1,4,8] with LRMC preprocessing and coherent narrowband sources.",
   "experiment_type": "subspace",
   "methods": [
     "music",
@@ -31,11 +31,15 @@
     "sensor_positions": [
       0,
       1,
-      2,
-      3
+      4,
+      8
     ],
-    "virtual_array_size": 4,
-    "use_lrmc": false
+    "virtual_array_size": 9,
+    "use_lrmc": true,
+    "lrmc_rank": 3,
+    "lrmc_solver": "svd",
+    "lrmc_init_strategy": "lag",
+    "lrmc_enforce_toeplitz": false
   },
   "model": {
     "tau": 3
@@ -45,17 +49,20 @@
     "train_test_ratio": 0.2
   },
   "report": {
-    "markdown_output": "ula_table1_results.md",
-    "markdown_title": "Paper Table I Reproduction - ULA",
-    "markdown_description": "Reproduction of the ULA portion of Paper Table I.",
+    "markdown_output": "nula_table1_results.md",
+    "markdown_title": "Paper Table I Reproduction - NULA + LRMC",
+    "markdown_description": "Paper-style comparison for the NULA [0,1,4,8] using LRMC before classical subspace estimation.",
     "markdown_conditions": [
-      "Array: ULA, 4 elements, 0.5 lambda spacing",
+      "Array: NULA [0, 1, 4, 8] on a 0.5 lambda grid",
+      "Virtual ULA size: 9",
       "Signals: 2 coherent narrowband sources",
       "Snapshots: T = 100",
       "SNR: 10 dB",
       "DOA range: [-90 deg, 90 deg]",
       "Minimum separation: 15 deg",
+      "LRMC: rank 3, solver svd",
       "Metric: DOA RMSE in degrees (periodic matching)"
-    ]
+    ],
+    "write_summary_csv": false
   }
 }
