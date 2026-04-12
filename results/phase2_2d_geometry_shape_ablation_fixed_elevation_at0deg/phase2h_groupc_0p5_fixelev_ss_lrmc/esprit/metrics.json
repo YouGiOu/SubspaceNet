@@ -1,0 +1,13 @@
+{
+  "template_name": "phase2h_groupc_0p5_fixelev_ss_lrmc",
+  "method_name": "esprit",
+  "rmse_deg": 15.39823266698,
+  "avg_runtime_sec": 0.01799822002442633,
+  "avg_lrmc_runtime_sec": 0.01648324542125138,
+  "avg_lrmc_iterations": 96.08791208791209,
+  "lrmc_convergence_rate": 0.11233211233211234,
+  "avg_lrmc_final_residual": 1.9495922819083648e-17,
+  "min_lrmc_eigenvalue": 1e-08,
+  "min_lrmc_singular_value": 9.999647400014402e-09,
+  "num_test_samples": 819
+}

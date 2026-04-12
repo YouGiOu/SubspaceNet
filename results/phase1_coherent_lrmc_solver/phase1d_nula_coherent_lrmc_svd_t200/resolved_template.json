@@ -1,0 +1,76 @@
+{
+  "experiment_type": "subspace",
+  "methods": [
+    "music",
+    "esprit",
+    "r-music"
+  ],
+  "seed": 42,
+  "commands": {
+    "CREATE_DATA": true,
+    "LOAD_DATA": false,
+    "TRAIN_MODEL": false,
+    "EVALUATE_MODE": true
+  },
+  "system_model": {
+    "N": 4,
+    "M": 2,
+    "T": 200,
+    "snr": 10,
+    "signal_type": "NarrowBand",
+    "signal_nature": "coherent",
+    "eta": 0,
+    "bias": 0,
+    "sv_noise_var": 0,
+    "array_spacing": 0.5,
+    "doa_min": -90.0,
+    "doa_max": 90.0,
+    "doa_resolution": 0.01,
+    "min_doa_gap": 15.0,
+    "sensor_positions": [
+      0,
+      1,
+      4,
+      8
+    ],
+    "virtual_array_size": 9,
+    "use_lrmc": true,
+    "lrmc_rank": 3,
+    "lrmc_solver": "svd",
+    "lrmc_init_strategy": "lag",
+    "lrmc_enforce_toeplitz": true,
+    "lrmc_max_iter": 100,
+    "lrmc_tol": 1e-06,
+    "lrmc_epsilon": 1e-08
+  },
+  "model": {
+    "tau": 3
+  },
+  "dataset": {
+    "samples_size": 4096,
+    "train_test_ratio": 0.2
+  },
+  "report": {
+    "markdown_output": "phase1_coherent_lrmc_solver_results.md",
+    "markdown_title": "Phase 1D - Coherent NULA LRMC Solver Ablation",
+    "markdown_description": "Phase 1D compares LRMC solver choices on coherent-signal NULA after fixing rank=3 and enabling Toeplitz.",
+    "markdown_conditions": [
+      "Array: NULA [0, 1, 4, 8] on a 0.5 lambda grid",
+      "Virtual ULA size: 9",
+      "Signals: 2 coherent narrowband sources",
+      "Snapshots: T = 200",
+      "SNR: 10 dB",
+      "DOA range: [-90 deg, 90 deg]",
+      "Minimum separation: 15 deg",
+      "Methods: MUSIC, Root-MUSIC, ESPRIT",
+      "Phase 1D focus: solver comparison after fixing rank=3 and enabling Toeplitz",
+      "LRMC rank fixed to 3, init fixed to lag, Toeplitz enabled",
+      "Metric: DOA RMSE in degrees (periodic matching)"
+    ],
+    "write_summary_csv": true,
+    "markdown_scheme_label": "LRMC solver=svd, Toeplitz on (T=200)"
+  },
+  "description": "Phase 1D coherent NULA with LRMC solver=svd at T=200.",
+  "template_name": "phase1d_nula_coherent_lrmc_svd_t200",
+  "template_path": "F:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase1_coherent_lrmc_solver\\phase1d_nula_coherent_lrmc_svd_t200.json"
+}

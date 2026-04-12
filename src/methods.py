@@ -51,7 +51,15 @@ Methods:
 import copy
 import numpy as np
 import scipy
-from src.lrmc import complete_nula_covariance
+import scipy.signal
+from src.lrmc import (
+    DEFAULT_ROW_GROUPS_2D,
+    average_covariance_blocks,
+    complete_nula_covariance,
+    complete_nula_covariance_from_covariance,
+    complete_rowwise_nula_covariance,
+    split_covariance_into_blocks,
+)
 from src.models import SubspaceNet
 from src.system_model import SystemModel
 from src.utils import sum_of_diag, find_roots, R2D
@@ -86,7 +94,11 @@ class SubspaceMethod(object):
             system_model: An instance of the SystemModel class.
         """
         self.system_model = system_model
+        self.row_sensor_positions = self._get_row_sensor_positions()
         self.virtual_system_model = self._build_virtual_system_model(system_model)
+        self.smoothed_virtual_system_model = self._build_smoothed_virtual_system_model()
+        self.row_system_model = self._build_row_system_model(system_model)
+        self.last_lrmc_diagnostics = None
 
     def _build_virtual_system_model(self, system_model: SystemModel):
         """Builds a virtual ULA model for LRMC-completed covariance processing."""
@@ -96,15 +108,144 @@ class SubspaceMethod(object):
         if virtual_size is None:
             return None
         params = copy.deepcopy(system_model.params)
+        params.set_parameter("geometry_name", None)
+        params.set_parameter("physical_sensor_positions_2d", None)
+        params.set_parameter("row_groups", None)
         params.set_parameter("N", virtual_size)
         params.set_parameter("sensor_positions", list(range(virtual_size)))
         params.set_parameter("use_lrmc", False)
         params.set_parameter("virtual_array_size", virtual_size)
         return SystemModel(params)
 
+    def _build_row_system_model(self, system_model: SystemModel):
+        """Builds the reduced row-wise model used for row smoothing and baselines."""
+        geometry_name = getattr(system_model.params, "geometry_name", None)
+        physical_sensor_positions_2d = getattr(
+            system_model.params, "physical_sensor_positions_2d", None
+        )
+        if (
+            physical_sensor_positions_2d is None
+            and not (isinstance(geometry_name, str) and geometry_name.startswith("mimo_2d_12ch"))
+        ):
+            return None
+        row_positions = self.row_sensor_positions
+        if row_positions is None:
+            return None
+        row_positions = list(row_positions)
+        if len(row_positions) == 0:
+            return None
+        params = copy.deepcopy(system_model.params)
+        params.set_parameter("geometry_name", None)
+        params.set_parameter("physical_sensor_positions_2d", None)
+        params.set_parameter("N", len(row_positions))
+        params.set_parameter("sensor_positions", row_positions)
+        params.set_parameter("use_lrmc", False)
+        return SystemModel(params)
+
+    def _build_smoothed_virtual_system_model(self):
+        """Builds the reduced virtual ULA used after spatial smoothing."""
+        if self.virtual_system_model is None:
+            return None
+        size = self.virtual_system_model.params.N
+        sub_array_size = int(size / 2) + 1
+        params = copy.deepcopy(self.virtual_system_model.params)
+        params.set_parameter("geometry_name", None)
+        params.set_parameter("physical_sensor_positions_2d", None)
+        params.set_parameter("row_groups", None)
+        params.set_parameter("N", sub_array_size)
+        params.set_parameter("sensor_positions", list(range(sub_array_size)))
+        params.set_parameter("virtual_array_size", sub_array_size)
+        return SystemModel(params)
+
+    def _get_row_groups(self):
+        row_groups = getattr(self.system_model.params, "row_groups", None)
+        if row_groups is None:
+            geometry_name = getattr(self.system_model.params, "geometry_name", None)
+            physical_sensor_positions_2d = getattr(
+                self.system_model.params, "physical_sensor_positions_2d", None
+            )
+            if physical_sensor_positions_2d is not None or (
+                isinstance(geometry_name, str) and geometry_name.startswith("mimo_2d_12ch")
+            ):
+                return DEFAULT_ROW_GROUPS_2D
+            return None
+        return tuple(tuple(int(index) for index in group) for group in row_groups)
+
+    def _get_row_sensor_positions(self):
+        """Derive the actual 1D sparse row geometry from the physical 2D coordinates."""
+        row_positions = getattr(self.system_model.params, "sensor_positions", None)
+        if row_positions is not None:
+            row_positions = list(row_positions)
+
+        physical_sensor_positions_2d = getattr(
+            self.system_model.params, "physical_sensor_positions_2d", None
+        )
+        row_groups = self._get_row_groups()
+        array_spacing = float(getattr(self.system_model.params, "array_spacing", 0.0) or 0.0)
+
+        if physical_sensor_positions_2d is None or not row_groups or array_spacing <= 0:
+            return row_positions
+
+        canonical_group = getattr(self.system_model.params, "canonical_row_group", None)
+        if canonical_group is None:
+            canonical_group = len(row_groups) - 1
+        canonical_group = int(max(0, min(canonical_group, len(row_groups) - 1)))
+
+        x_positions = np.asarray(
+            [physical_sensor_positions_2d[index][0] for index in row_groups[canonical_group]],
+            dtype=float,
+        )
+        normalized_positions = (x_positions - np.min(x_positions)) / array_spacing
+        rounded_positions = np.rint(normalized_positions)
+
+        if (
+            np.max(np.abs(normalized_positions - rounded_positions)) < 1e-6
+            and np.all(np.diff(rounded_positions) >= 0)
+        ):
+            return rounded_positions.astype(int).tolist()
+        return row_positions
+
+    def apply_postprocessing(self, covariance_mat: np.ndarray):
+        """Applies optional post-LRMC decorrelation on the completed covariance."""
+        mode = str(getattr(self.system_model.params, "lrmc_postprocessing", "none")).lower()
+        if mode in {"", "none"}:
+            return covariance_mat
+
+        def forward_backward_average(matrix: np.ndarray):
+            size = matrix.shape[0]
+            exchange = np.fliplr(np.eye(size))
+            return 0.5 * (matrix + exchange @ np.conjugate(matrix) @ exchange)
+
+        def spatial_smoothing_from_covariance(matrix: np.ndarray):
+            size = matrix.shape[0]
+            sub_array_size = int(size / 2) + 1
+            number_of_sub_arrays = size - sub_array_size + 1
+            smoothed = np.zeros((sub_array_size, sub_array_size), dtype=np.complex128)
+            for start in range(number_of_sub_arrays):
+                smoothed += matrix[start : start + sub_array_size, start : start + sub_array_size]
+            return smoothed / number_of_sub_arrays
+
+        output = np.asarray(covariance_mat, dtype=np.complex128)
+        if mode in {"fba", "fba+ss", "ss+fba"}:
+            output = forward_backward_average(output)
+        if mode in {"spatial_smoothing", "ss", "fba+ss", "ss+fba"}:
+            output = spatial_smoothing_from_covariance(output)
+        return output
+
     def get_processing_model(self, mode: str):
         """Returns the appropriate array model for the selected covariance mode."""
+        if mode.startswith("sample") and self.row_system_model is not None:
+            return self.row_system_model
+        if mode.startswith("spatial_smoothing") and self.row_system_model is not None:
+            return self.row_system_model
+        if mode == "lrmc_then_ss" and self.smoothed_virtual_system_model is not None:
+            return self.smoothed_virtual_system_model
+        if mode in {"ss_then_lrmc", "lrmc_only", "lrmc"} and self.virtual_system_model is not None:
+            return self.virtual_system_model
         if mode.startswith("lrmc") and self.virtual_system_model is not None:
+            post = str(getattr(self.system_model.params, "lrmc_postprocessing", "none")).lower()
+            if post in {"spatial_smoothing", "ss", "fba+ss", "ss+fba"} and self.smoothed_virtual_system_model is not None:
+                return self.smoothed_virtual_system_model
             return self.virtual_system_model
         return self.system_model
 
@@ -130,6 +271,8 @@ class SubspaceMethod(object):
             Exception: If the covariance calculation mode is not defined.
         """
 
+        self.last_lrmc_diagnostics = None
+
         def spatial_smoothing_covariance(X: np.ndarray):
             """
             Calculates the covariance matrix using spatial smoothing technique.
@@ -142,6 +285,11 @@ class SubspaceMethod(object):
             --------
                 covariance_mat (np.ndarray): Covariance matrix.
             """
+            row_groups = self._get_row_groups()
+            if row_groups:
+                covariance = np.cov(X)
+                blocks = split_covariance_into_blocks(covariance, row_groups)
+                return average_covariance_blocks(blocks)
             # Define the sub-arrays size
             sub_array_size = int(self.system_model.params.N / 2) + 1
             # Define the number of sub-arrays
@@ -195,7 +343,30 @@ class SubspaceMethod(object):
 
         def lrmc_covariance(X: np.ndarray):
             """Calculates covariance via LRMC-completed virtual ULA covariance."""
-            _, _, _, completed_covariance, _ = complete_nula_covariance(
+            row_groups = self._get_row_groups()
+            if row_groups and mode in {"lrmc_only", "lrmc", "lrmc_then_ss"}:
+                covariance = np.cov(X)
+                variant = "canonical" if mode in {"lrmc_only", "lrmc"} else "average_completed"
+                _, _, _, completed_covariance, diagnostics = complete_rowwise_nula_covariance(
+                    covariance=covariance,
+                    row_groups=row_groups,
+                    sensor_positions=self.row_sensor_positions,
+                    virtual_size=self.system_model.params.virtual_array_size,
+                    rank=self.system_model.params.lrmc_rank,
+                    solver=self.system_model.params.lrmc_solver,
+                    init_strategy=getattr(self.system_model.params, "lrmc_init_strategy", "lag"),
+                    max_iter=getattr(self.system_model.params, "lrmc_max_iter", 100),
+                    tol=getattr(self.system_model.params, "lrmc_tol", 1e-6),
+                    epsilon=getattr(self.system_model.params, "lrmc_epsilon", 1e-8),
+                    enforce_toeplitz=getattr(
+                        self.system_model.params, "lrmc_enforce_toeplitz", False
+                    ),
+                    nuclear_ridge=getattr(self.system_model.params, "lrmc_nuclear_ridge", 1e-8),
+                    variant=variant,
+                )
+                self.last_lrmc_diagnostics = diagnostics
+                return self.apply_postprocessing(completed_covariance)
+            _, _, _, completed_covariance, diagnostics = complete_nula_covariance(
                 X=np.asarray(X),
                 sensor_positions=self.system_model.params.sensor_positions,
                 virtual_size=self.system_model.params.virtual_array_size,
@@ -208,17 +379,80 @@ class SubspaceMethod(object):
                 enforce_toeplitz=getattr(
                     self.system_model.params, "lrmc_enforce_toeplitz", False
                 ),
+                nuclear_ridge=getattr(self.system_model.params, "lrmc_nuclear_ridge", 1e-8),
             )
-            return completed_covariance
+            self.last_lrmc_diagnostics = diagnostics
+            return self.apply_postprocessing(completed_covariance)
+
+        def rowwise_lrmc_then_smoothing(X: np.ndarray):
+            covariance = np.cov(X)
+            _, _, _, completed_covariance, diagnostics = complete_rowwise_nula_covariance(
+                covariance=covariance,
+                row_groups=self._get_row_groups(),
+                sensor_positions=self.row_sensor_positions,
+                virtual_size=self.system_model.params.virtual_array_size,
+                rank=self.system_model.params.lrmc_rank,
+                solver=self.system_model.params.lrmc_solver,
+                init_strategy=getattr(self.system_model.params, "lrmc_init_strategy", "lag"),
+                max_iter=getattr(self.system_model.params, "lrmc_max_iter", 100),
+                tol=getattr(self.system_model.params, "lrmc_tol", 1e-6),
+                epsilon=getattr(self.system_model.params, "lrmc_epsilon", 1e-8),
+                enforce_toeplitz=getattr(
+                    self.system_model.params, "lrmc_enforce_toeplitz", False
+                ),
+                nuclear_ridge=getattr(self.system_model.params, "lrmc_nuclear_ridge", 1e-8),
+                variant="average_completed",
+            )
+            self.last_lrmc_diagnostics = diagnostics
+            return self.apply_postprocessing(completed_covariance)
+
+        def rowwise_smoothing_then_lrmc(X: np.ndarray):
+            covariance = np.cov(X)
+            _, _, _, completed_covariance, diagnostics = complete_rowwise_nula_covariance(
+                covariance=covariance,
+                row_groups=self._get_row_groups(),
+                sensor_positions=self.row_sensor_positions,
+                virtual_size=self.system_model.params.virtual_array_size,
+                rank=self.system_model.params.lrmc_rank,
+                solver=self.system_model.params.lrmc_solver,
+                init_strategy=getattr(self.system_model.params, "lrmc_init_strategy", "lag"),
+                max_iter=getattr(self.system_model.params, "lrmc_max_iter", 100),
+                tol=getattr(self.system_model.params, "lrmc_tol", 1e-6),
+                epsilon=getattr(self.system_model.params, "lrmc_epsilon", 1e-8),
+                enforce_toeplitz=getattr(
+                    self.system_model.params, "lrmc_enforce_toeplitz", False
+                ),
+                nuclear_ridge=getattr(self.system_model.params, "lrmc_nuclear_ridge", 1e-8),
+                variant="average_raw",
+            )
+            self.last_lrmc_diagnostics = diagnostics
+            return self.apply_postprocessing(completed_covariance)
 
         if mode.startswith("spatial_smoothing"):
             return spatial_smoothing_covariance(X)
         elif mode.startswith("SubspaceNet"):
             return subspacnet_covariance(X, model)
+        elif mode in {"lrmc_then_ss"}:
+            return rowwise_lrmc_then_smoothing(X)
+        elif mode in {"ss_then_lrmc"}:
+            return rowwise_smoothing_then_lrmc(X)
+        elif mode in {"lrmc_only", "lrmc"}:
+            return lrmc_covariance(X)
         elif mode.startswith("lrmc"):
             return lrmc_covariance(X)
         elif mode.startswith("sample"):
-            return np.cov(X)
+            covariance = np.cov(X)
+            row_groups = self._get_row_groups()
+            if row_groups:
+                canonical_group = getattr(
+                    self.system_model.params, "canonical_row_group", None
+                )
+                if canonical_group is None:
+                    canonical_group = len(row_groups) - 1
+                canonical_group = int(canonical_group)
+                canonical_group = max(0, min(canonical_group, len(row_groups) - 1))
+                return covariance[np.ix_(row_groups[canonical_group], row_groups[canonical_group])]
+            return covariance
         else:
             raise Exception(
                 (
@@ -285,8 +519,21 @@ class MUSIC(SubspaceMethod):
             system_model: An instance of the SystemModel class.
         """
         super().__init__(system_model)
-        # angle axis for representation of the MUSIC spectrum
-        self._angels = np.linspace(-1 * np.pi / 2, np.pi / 2, 18000, endpoint=False)
+        # Angle axis for representation of the MUSIC spectrum.
+        # Keep the scan window aligned with the dataset/template FOV so smaller
+        # experiments do not waste time scanning the full +/-90 degree range.
+        doa_min_deg = float(getattr(system_model.params, "doa_min", -90.0))
+        doa_max_deg = float(getattr(system_model.params, "doa_max", 90.0))
+        doa_resolution_deg = float(getattr(system_model.params, "doa_resolution", 0.01))
+        if doa_max_deg <= doa_min_deg:
+            doa_min_deg, doa_max_deg = -90.0, 90.0
+        if doa_resolution_deg <= 0:
+            doa_resolution_deg = 0.01
+        num_samples = max(1, int(np.ceil((doa_max_deg - doa_min_deg) / doa_resolution_deg)))
+        self._angels_deg = np.linspace(
+            doa_min_deg, doa_max_deg, num_samples, endpoint=False, dtype=float
+        )
+        self._angels = self._angels_deg * np.pi / 180.0
 
     def spectrum_calculation(
         self,
@@ -548,10 +795,15 @@ class RootMUSIC(SubspaceMethod):
             roots_angels (np.ndarray): Phase components of the roots.
 
         """
+        array_spacing = float(getattr(self.system_model.params, "array_spacing", 0.5))
+        if array_spacing <= 0:
+            array_spacing = 0.5
         # Calculate the phase component of the roots
         roots_angels = np.angle(roots)
-        # Calculate the DoA out of the phase component
-        doa_predictions = np.arcsin((1 / np.pi) * roots_angels) * R2D
+        # Calculate the DoA out of the phase component using the actual spacing.
+        normalized_phase = roots_angels / (2 * np.pi * array_spacing)
+        normalized_phase = np.clip(normalized_phase, -1.0, 1.0)
+        doa_predictions = np.arcsin(normalized_phase) * R2D
         return doa_predictions, roots_angels
 
 

@@ -1,0 +1,79 @@
+{
+  "description": "Paper Table I reproduction: SubspaceNet on NULA [0,1,4,8] with LRMC preprocessing and coherent narrowband sources.",
+  "experiment_type": "subspacenet",
+  "methods": [
+    "esprit",
+    "root-music"
+  ],
+  "seed": 42,
+  "commands": {
+    "CREATE_DATA": true,
+    "LOAD_DATA": false,
+    "TRAIN_MODEL": true,
+    "EVALUATE_MODE": true
+  },
+  "system_model": {
+    "N": 4,
+    "M": 2,
+    "T": 100,
+    "snr": 10,
+    "signal_type": "NarrowBand",
+    "signal_nature": "coherent",
+    "eta": 0,
+    "bias": 0,
+    "sv_noise_var": 0,
+    "array_spacing": 0.5,
+    "doa_min": -90.0,
+    "doa_max": 90.0,
+    "doa_resolution": 0.01,
+    "min_doa_gap": 15.0,
+    "sensor_positions": [
+      0,
+      1,
+      4,
+      8
+    ],
+    "virtual_array_size": 9,
+    "use_lrmc": true,
+    "lrmc_rank": 3,
+    "lrmc_solver": "svd",
+    "lrmc_init_strategy": "lag",
+    "lrmc_enforce_toeplitz": false
+  },
+  "model": {
+    "model_type": "SubspaceNet",
+    "tau": 3
+  },
+  "dataset": {
+    "samples_size": 4096,
+    "train_test_ratio": 0.2
+  },
+  "training": {
+    "batch_size": 64,
+    "epochs": 200,
+    "learning_rate": 5e-06,
+    "weight_decay": 1e-09,
+    "scheduler_step_size": 120,
+    "scheduler_gamma": 0.2
+  },
+  "report": {
+    "markdown_output": "nula_table1_results.md",
+    "markdown_title": "Paper Table I Reproduction - NULA + LRMC",
+    "markdown_description": "Paper-style comparison for the NULA [0,1,4,8] using LRMC before SubspaceNet inference.",
+    "markdown_conditions": [
+      "Array: NULA [0, 1, 4, 8] on a 0.5 lambda grid",
+      "Virtual ULA size: 9",
+      "Signals: 2 coherent narrowband sources",
+      "Snapshots: T = 100",
+      "SNR: 10 dB",
+      "DOA range: [-90 deg, 90 deg]",
+      "Minimum separation: 15 deg",
+      "SubspaceNet tau: 3",
+      "LRMC: rank 3, solver svd",
+      "Metric: DOA RMSE in degrees (periodic matching)"
+    ],
+    "write_summary_csv": false
+  },
+  "template_name": "paper_table1_subspacenet_nula",
+  "template_path": "/root/autodl-tmp/SubspaceNet/data/dataset_templates/ablation/paper_table1_subspacenet_nula.json"
+}

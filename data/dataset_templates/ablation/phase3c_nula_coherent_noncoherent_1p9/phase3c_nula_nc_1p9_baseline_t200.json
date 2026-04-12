@@ -1,0 +1,43 @@
+{
+  "experiment_type": "subspace",
+  "methods": ["music", "esprit", "r-music"],
+  "seed": 42,
+  "commands": { "CREATE_DATA": true, "LOAD_DATA": false, "TRAIN_MODEL": false, "EVALUATE_MODE": true },
+  "system_model": {
+    "N": 4,
+    "M": 2,
+    "T": 200,
+    "snr": 10,
+    "signal_type": "NarrowBand",
+    "signal_nature": "non-coherent",
+    "eta": 0,
+    "bias": 0,
+    "sv_noise_var": 0,
+    "array_spacing": 1.9,
+    "doa_min": -15.0,
+    "doa_max": 15.0,
+    "doa_resolution": 0.01,
+    "min_doa_gap": 5.0,
+    "sensor_positions": [0, 1, 4, 8],
+    "virtual_array_size": 9,
+    "use_lrmc": false
+  },
+  "model": { "tau": 3 },
+  "dataset": { "samples_size": 4096, "train_test_ratio": 0.2 },
+  "report": {
+    "markdown_output": "phase3c_nula_coherent_noncoherent_1p9_results.md",
+    "markdown_title": "Phase 3c - 1D NULA 1.9 Lambda Coherent vs Non-Coherent Comparison",
+    "markdown_description": "Baseline MUSIC / Root-MUSIC / ESPRIT on the sparse NULA [0,1,4,8] with 1.9 lambda spacing, non-coherent sources.",
+    "markdown_conditions": [
+      "Array: 1D sparse NULA [0, 1, 4, 8]",
+      "Physical spacing: 1.9 lambda",
+      "Sources: 2 non-coherent narrowband targets",
+      "Snapshots: T = 200",
+      "FOV: [-15 deg, 15 deg]",
+      "Minimum separation: 5 deg"
+    ],
+    "write_summary_csv": true,
+    "markdown_scheme_label": "Non-coherent baseline"
+  },
+  "description": "Phase 3c non-coherent baseline on the 1.9 lambda NULA."
+}

@@ -97,6 +97,22 @@ class Samples(SystemModel):
         else:
             # Generate
             self.doa = np.array(doa) * D2R
+            self.elevation_doa = None
+
+    def set_doa_2d(self, doa_pairs):
+        """
+        Sets azimuth/elevation pairs for 2D data generation.
+
+        Args:
+            doa_pairs (list[tuple[float, float]]): Azimuth/elevation pairs in degrees.
+        """
+        azimuths = []
+        elevations = []
+        for azimuth_deg, elevation_deg in doa_pairs:
+            azimuths.append(float(azimuth_deg))
+            elevations.append(float(elevation_deg))
+        self.doa = np.asarray(azimuths, dtype=float) * D2R
+        self.elevation_doa = np.asarray(elevations, dtype=float) * D2R
 
     def samples_creation(
         self,
@@ -129,7 +145,15 @@ class Samples(SystemModel):
         noise = self.noise_creation(noise_mean, noise_variance)
         # Generate Narrowband samples
         if self.params.signal_type.startswith("NarrowBand"):
-            A = np.array([self.steering_vec(theta) for theta in self.doa]).T
+            if getattr(self, "elevation_doa", None) is not None and self.array.ndim == 2:
+                A = np.array(
+                    [
+                        self.steering_vec_2d(azimuth, elevation)
+                        for azimuth, elevation in zip(self.doa, self.elevation_doa)
+                    ]
+                ).T
+            else:
+                A = np.array([self.steering_vec(theta) for theta in self.doa]).T
             samples = (A @ signal) + noise
             return samples, signal, A, noise
         # Generate Broadband samples

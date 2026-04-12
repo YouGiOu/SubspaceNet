@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections import defaultdict
 from dataclasses import dataclass, field
 import time
-from typing import Dict, Iterable, List, Optional, Tuple
+from typing import Dict, Iterable, List, Optional, Sequence, Tuple
 
 import numpy as np
 import torch
@@ -29,6 +29,13 @@ class LRMCDiagnostics:
     observable_lags: List[int] = field(default_factory=list)
 
 
+DEFAULT_ROW_GROUPS_2D: Tuple[Tuple[int, ...], ...] = (
+    (0, 1, 2, 3),
+    (4, 5, 6, 7),
+    (8, 9, 10, 11),
+)
+
+
 def compute_sample_covariance(X: np.ndarray) -> np.ndarray:
     """Returns the sample covariance matrix R = (1/T) X X^H."""
     X = np.asarray(X, dtype=np.complex128)
@@ -38,6 +45,30 @@ def compute_sample_covariance(X: np.ndarray) -> np.ndarray:
     if snapshots <= 0:
         raise ValueError("compute_sample_covariance: X must contain snapshots")
     return (X @ np.conjugate(X.T)) / snapshots
+
+
+def split_covariance_into_blocks(
+    covariance: np.ndarray, row_groups: Sequence[Sequence[int]]
+) -> List[np.ndarray]:
+    """Extracts covariance blocks for the provided row groups."""
+    covariance = np.asarray(covariance, dtype=np.complex128)
+    blocks = []
+    for group in row_groups:
+        indices = np.asarray(group, dtype=int)
+        blocks.append(covariance[np.ix_(indices, indices)])
+    return blocks
+
+
+def average_covariance_blocks(blocks: Sequence[np.ndarray]) -> np.ndarray:
+    """Averages covariance blocks elementwise."""
+    if not blocks:
+        raise ValueError("average_covariance_blocks: blocks must not be empty")
+    reference_shape = np.asarray(blocks[0]).shape
+    for block in blocks:
+        if np.asarray(block).shape != reference_shape:
+            raise ValueError("average_covariance_blocks: all blocks must have the same shape")
+    stacked = np.stack([np.asarray(block, dtype=np.complex128) for block in blocks], axis=0)
+    return np.mean(stacked, axis=0)
 
 
 def enumerate_nula_lags(sensor_positions: Iterable[float]) -> Dict[int, List[Tuple[int, int]]]:
@@ -94,6 +125,20 @@ def build_virtual_covariance_observation(
             "build_virtual_covariance_observation: partial covariance must be Hermitian"
         )
     return partial, mask, lag_map
+
+
+def build_virtual_covariance_observation_from_covariance(
+    covariance: np.ndarray,
+    sensor_positions: Iterable[float],
+    virtual_size: int,
+) -> Tuple[np.ndarray, np.ndarray, Dict[int, List[Tuple[int, int]]]]:
+    """Builds a partial virtual covariance from an already computed covariance matrix."""
+    covariance = np.asarray(covariance, dtype=np.complex128)
+    return build_virtual_covariance_observation(
+        covariance=covariance,
+        sensor_positions=sensor_positions,
+        virtual_size=virtual_size,
+    )
 
 
 def initialize_missing_entries(
@@ -237,6 +282,7 @@ def complete_covariance_nuclear_norm(
     rank: int,
     epsilon: float = 1e-8,
     enforce_toeplitz: bool = False,
+    ridge_weight: float = 1e-8,
 ) -> Tuple[np.ndarray, LRMCDiagnostics]:
     """Completes a covariance matrix using convex nuclear-norm minimization."""
     try:
@@ -249,15 +295,16 @@ def complete_covariance_nuclear_norm(
     diagnostics = LRMCDiagnostics(solver="nuclear", rank=rank)
     start = time.perf_counter()
     size = partial.shape[0]
-    Z = cp.Variable((size, size), complex=True, hermitian=True)
+    Z = cp.Variable((size, size), hermitian=True)
     constraints = [cp.multiply(mask, Z - partial) == 0]
     if enforce_toeplitz:
-        for lag in range(-(size - 2), size - 1):
-            diag_a = cp.diag(Z, k=lag)
-            diag_b = cp.diag(Z, k=lag + 1)
-            if diag_a.shape[0] == 0 or diag_b.shape[0] == 0:
-                continue
-    problem = cp.Problem(cp.Minimize(cp.normNuc(Z)), constraints)
+        for row in range(size - 1):
+            for col in range(size - 1):
+                constraints.append(Z[row, col] == Z[row + 1, col + 1])
+    objective = cp.normNuc(Z)
+    if ridge_weight > 0:
+        objective += 0.5 * ridge_weight * cp.sum_squares(cp.abs(Z))
+    problem = cp.Problem(cp.Minimize(objective), constraints)
     problem.solve(solver=cp.SCS, verbose=False)
     estimate = np.asarray(Z.value, dtype=np.complex128)
     if enforce_toeplitz:
@@ -277,6 +324,38 @@ def complete_covariance_nuclear_norm(
     return completed, diagnostics
 
 
+def combine_diagnostics(diagnostics: Sequence[LRMCDiagnostics]) -> LRMCDiagnostics:
+    """Combines several diagnostics objects into one summary object."""
+    diagnostics = list(diagnostics)
+    if not diagnostics:
+        raise ValueError("combine_diagnostics: diagnostics must not be empty")
+    combined = LRMCDiagnostics(
+        solver=diagnostics[0].solver,
+        rank=diagnostics[0].rank,
+        iterations=int(np.round(np.mean([diag.iterations for diag in diagnostics]))),
+        converged=all(diag.converged for diag in diagnostics),
+        runtime_sec=float(np.sum([diag.runtime_sec for diag in diagnostics])),
+        observed_residuals=[
+            float(np.mean([diag.observed_residuals[-1] if diag.observed_residuals else 0.0 for diag in diagnostics]))
+        ],
+        relative_changes=[
+            float(np.mean([diag.relative_changes[-1] if diag.relative_changes else 0.0 for diag in diagnostics]))
+        ],
+        singular_values=diagnostics[0].singular_values[-1:] if diagnostics[0].singular_values else [],
+        effective_ranks=[int(np.round(np.mean([diag.effective_ranks[-1] if diag.effective_ranks else 0 for diag in diagnostics])))]
+        if diagnostics[0].effective_ranks
+        else [],
+        min_eigenvalue=float(np.min([diag.min_eigenvalue for diag in diagnostics if diag.min_eigenvalue is not None]))
+        if any(diag.min_eigenvalue is not None for diag in diagnostics)
+        else None,
+        min_singular_value=float(np.min([diag.min_singular_value for diag in diagnostics if diag.min_singular_value is not None]))
+        if any(diag.min_singular_value is not None for diag in diagnostics)
+        else None,
+        observable_lags=sorted({lag for diag in diagnostics for lag in diag.observable_lags}),
+    )
+    return combined
+
+
 def complete_nula_covariance(
     X: np.ndarray,
     sensor_positions: Iterable[float],
@@ -288,11 +367,41 @@ def complete_nula_covariance(
     tol: float = 1e-6,
     epsilon: float = 1e-8,
     enforce_toeplitz: bool = False,
+    nuclear_ridge: float = 1e-8,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, LRMCDiagnostics]:
     """Runs the full LRMC pipeline from sparse snapshots to completed virtual covariance."""
     covariance = compute_sample_covariance(X)
-    partial, mask, lag_map = build_virtual_covariance_observation(
+    return complete_nula_covariance_from_covariance(
         covariance=covariance,
+        sensor_positions=sensor_positions,
+        virtual_size=virtual_size,
+        rank=rank,
+        solver=solver,
+        init_strategy=init_strategy,
+        max_iter=max_iter,
+        tol=tol,
+        epsilon=epsilon,
+        enforce_toeplitz=enforce_toeplitz,
+        nuclear_ridge=nuclear_ridge,
+    )
+
+
+def complete_nula_covariance_from_covariance(
+    covariance: np.ndarray,
+    sensor_positions: Iterable[float],
+    virtual_size: int,
+    rank: int,
+    solver: str = "svd",
+    init_strategy: str = "lag",
+    max_iter: int = 100,
+    tol: float = 1e-6,
+    epsilon: float = 1e-8,
+    enforce_toeplitz: bool = False,
+    nuclear_ridge: float = 1e-8,
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, LRMCDiagnostics]:
+    """Runs LRMC when a covariance matrix is already available."""
+    partial, mask, lag_map = build_virtual_covariance_observation(
+        covariance=np.asarray(covariance, dtype=np.complex128),
         sensor_positions=sensor_positions,
         virtual_size=virtual_size,
     )
@@ -303,6 +412,7 @@ def complete_nula_covariance(
             rank=rank,
             epsilon=epsilon,
             enforce_toeplitz=enforce_toeplitz,
+            ridge_weight=nuclear_ridge,
         )
     else:
         completed, diagnostics = complete_covariance_svd(
@@ -317,6 +427,91 @@ def complete_nula_covariance(
         )
     diagnostics.observable_lags = sorted(lag_map.keys())
     return covariance, partial, mask, completed, diagnostics
+
+
+def complete_rowwise_nula_covariance(
+    covariance: np.ndarray,
+    row_groups: Sequence[Sequence[int]],
+    sensor_positions: Iterable[float],
+    virtual_size: int,
+    rank: int,
+    solver: str = "svd",
+    init_strategy: str = "lag",
+    max_iter: int = 100,
+    tol: float = 1e-6,
+    epsilon: float = 1e-8,
+    enforce_toeplitz: bool = False,
+    nuclear_ridge: float = 1e-8,
+    variant: str = "canonical",
+) -> Tuple[np.ndarray, Optional[np.ndarray], Optional[np.ndarray], np.ndarray, LRMCDiagnostics]:
+    """
+    Completes a row-replicated NULA covariance according to the requested variant.
+
+    Variants:
+        - canonical: complete the canonical row only
+        - average_raw: average row blocks first, then complete once
+        - average_completed: complete each row block independently, then average completions
+    """
+    row_blocks = split_covariance_into_blocks(covariance, row_groups=row_groups)
+    if variant == "average_raw":
+        smoothed_covariance = average_covariance_blocks(row_blocks)
+        covariance_out, partial, mask, completed, diagnostics = complete_nula_covariance_from_covariance(
+            covariance=smoothed_covariance,
+            sensor_positions=sensor_positions,
+            virtual_size=virtual_size,
+            rank=rank,
+            solver=solver,
+            init_strategy=init_strategy,
+            max_iter=max_iter,
+            tol=tol,
+            epsilon=epsilon,
+            enforce_toeplitz=enforce_toeplitz,
+            nuclear_ridge=nuclear_ridge,
+        )
+        diagnostics.runtime_sec = float(diagnostics.runtime_sec)
+        return covariance_out, partial, mask, completed, diagnostics
+
+    if variant == "average_completed":
+        completions = []
+        diagnostics_list = []
+        partial = None
+        mask = None
+        covariance_out = None
+        for block in row_blocks:
+            covariance_out, partial, mask, completed, diagnostics = complete_nula_covariance_from_covariance(
+                covariance=block,
+                sensor_positions=sensor_positions,
+                virtual_size=virtual_size,
+                rank=rank,
+                solver=solver,
+                init_strategy=init_strategy,
+                max_iter=max_iter,
+                tol=tol,
+                epsilon=epsilon,
+                enforce_toeplitz=enforce_toeplitz,
+                nuclear_ridge=nuclear_ridge,
+            )
+            completions.append(completed)
+            diagnostics_list.append(diagnostics)
+        completed = average_covariance_blocks(completions)
+        diagnostics = combine_diagnostics(diagnostics_list)
+        return covariance_out, partial, mask, completed, diagnostics
+
+    canonical_index = -1
+    covariance_out, partial, mask, completed, diagnostics = complete_nula_covariance_from_covariance(
+        covariance=row_blocks[canonical_index],
+        sensor_positions=sensor_positions,
+        virtual_size=virtual_size,
+        rank=rank,
+        solver=solver,
+        init_strategy=init_strategy,
+        max_iter=max_iter,
+        tol=tol,
+        epsilon=epsilon,
+        enforce_toeplitz=enforce_toeplitz,
+        nuclear_ridge=nuclear_ridge,
+    )
+    return covariance_out, partial, mask, completed, diagnostics
 
 
 def covariance_to_autocorrelation_tensor(

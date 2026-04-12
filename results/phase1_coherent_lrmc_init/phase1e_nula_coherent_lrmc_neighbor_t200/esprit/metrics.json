@@ -1,0 +1,6 @@
+{
+  "template_name": "phase1e_nula_coherent_lrmc_neighbor_t200",
+  "method_name": "esprit",
+  "rmse_deg": 11.116016128042883,
+  "num_test_samples": 819
+}

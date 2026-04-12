@@ -1,0 +1,2 @@
+scheme,method,rmse_deg,avg_runtime_sec,avg_lrmc_runtime_sec,avg_lrmc_iterations,lrmc_convergence_rate,avg_lrmc_final_residual,min_lrmc_eigenvalue,min_lrmc_singular_value
+phase3b_nula_nc_music_1p9_no_lrmc_t200,music,5.357555221706855,0.06935768339438352,,,,,,

@@ -1,0 +1,6 @@
+{
+  "template_name": "phase1d_nula_coherent_lrmc_svd_t200",
+  "method_name": "esprit",
+  "rmse_deg": 10.10740122137859,
+  "num_test_samples": 819
+}

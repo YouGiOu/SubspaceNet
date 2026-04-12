@@ -1,0 +1,13 @@
+{
+  "template_name": "phase3a_spacing_0p5_lrmc_t200",
+  "method_name": "r-music",
+  "rmse_deg": 9.619226001079792,
+  "avg_runtime_sec": 0.036717816971915465,
+  "avg_lrmc_runtime_sec": 0.03532820305250282,
+  "avg_lrmc_iterations": 69.34798534798534,
+  "lrmc_convergence_rate": 0.7277167277167277,
+  "avg_lrmc_final_residual": 0.0,
+  "min_lrmc_eigenvalue": 1e-08,
+  "min_lrmc_singular_value": 9.999705476112616e-09,
+  "num_test_samples": 819
+}

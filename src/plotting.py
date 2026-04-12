@@ -119,6 +119,10 @@ def plot_mvdr_spectrum(system_model, figures: dict, spectrum: np.ndarray,
     """
     # Initialize MVDR instance
     mvdr = MVDR(system_model)
+    doa_min = float(getattr(system_model.params, "doa_min", -90.0))
+    doa_max = float(getattr(system_model.params, "doa_max", 90.0))
+    if doa_max <= doa_min:
+      doa_min, doa_max = -90.0, 90.0
     # Initialize plot for spectrum
     if figures["mvdr"]["fig"] == None:
       plt.style.use('default')
@@ -128,8 +132,8 @@ def plot_mvdr_spectrum(system_model, figures: dict, spectrum: np.ndarray,
     # Set axis location and limits
     figures["mvdr"]["ax"].set_theta_zero_location('N')
     figures["mvdr"]["ax"].set_theta_direction(-1)
-    figures["mvdr"]["ax"].set_thetamin(-90)
-    figures["mvdr"]["ax"].set_thetamax(90)
+    figures["mvdr"]["ax"].set_thetamin(doa_min)
+    figures["mvdr"]["ax"].set_thetamax(doa_max)
     figures["mvdr"]["ax"].set_ylim([0.0, 1.01])
     # Plot normalized mvdr beam pattern
     figures["mvdr"]["ax"].plot(mvdr._angels , spectrum / np.max(spectrum), label=algorithm)

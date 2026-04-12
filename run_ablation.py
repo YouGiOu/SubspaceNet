@@ -6,6 +6,7 @@ import argparse
 import copy
 import csv
 import json
+import time
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional
 
@@ -35,17 +36,12 @@ TRADITIONAL_METHODS = {
 }
 
 
-PAPER_MARKDOWN_LABELS = {
-    ("paper_table1_subspace_ula", "music"): "MUSIC",
-    ("paper_table1_subspace_ula", "r-music"): "Root-MUSIC",
-    ("paper_table1_subspace_ula", "esprit"): "ESPRIT",
-    ("paper_table1_subspacenet_ula", "root-music"): "SubspaceNet + Root-MUSIC",
-    ("paper_table1_subspacenet_ula", "esprit"): "SubspaceNet + ESPRIT",
-    ("paper_table1_subspace_nula_lrmc", "music"): "LRMC + MUSIC",
-    ("paper_table1_subspace_nula_lrmc", "r-music"): "LRMC + Root-MUSIC",
-    ("paper_table1_subspace_nula_lrmc", "esprit"): "LRMC + ESPRIT",
-    ("paper_table1_subspacenet_nula", "root-music"): "LRMC + SubspaceNet + Root-MUSIC",
-    ("paper_table1_subspacenet_nula", "esprit"): "LRMC + SubspaceNet + ESPRIT",
+METHOD_MARKDOWN_LABELS = {
+    "dbf": "DBF",
+    "music": "MUSIC",
+    "esprit": "ESPRIT",
+    "root-music": "Root-MUSIC",
+    "r-music": "Root-MUSIC",
 }
 
 
@@ -252,8 +248,18 @@ def run_traditional_method(
     template: Dict,
 ):
     method = method_class(system_model)
-    method_mode = "lrmc" if template.get("system_model", {}).get("use_lrmc", False) else "sample"
+    system_model_config = template.get("system_model", {})
+    method_mode = system_model_config.get("covariance_mode")
+    if not method_mode:
+        method_mode = "lrmc" if system_model_config.get("use_lrmc", False) else "sample"
     per_sample_rmse = []
+    per_sample_runtime = []
+    lrmc_runtimes = []
+    lrmc_iterations = []
+    lrmc_convergence = []
+    lrmc_residuals = []
+    lrmc_min_eigenvalues = []
+    lrmc_min_singular_values = []
     progress = tqdm(
         generic_test_dataset,
         total=len(generic_test_dataset),
@@ -262,6 +268,7 @@ def run_traditional_method(
     for X, doa in progress:
         observations = np.asarray(X)
         doa_deg = np.asarray(doa) * R2D
+        start = time.perf_counter()
         if method_name == "dbf":
             predictions, spectrum, _ = method.narrowband(observations, mode=method_mode)
         elif method_name == "music":
@@ -276,19 +283,56 @@ def run_traditional_method(
             spectrum = None
         else:
             raise ValueError(f"Unsupported traditional method: {method_name}")
+        per_sample_runtime.append(time.perf_counter() - start)
+        diagnostics = getattr(method, "last_lrmc_diagnostics", None)
+        if diagnostics is not None:
+            lrmc_runtimes.append(float(getattr(diagnostics, "runtime_sec", 0.0)))
+            lrmc_iterations.append(int(getattr(diagnostics, "iterations", 0)))
+            lrmc_convergence.append(bool(getattr(diagnostics, "converged", False)))
+            if getattr(diagnostics, "observed_residuals", None):
+                lrmc_residuals.append(float(diagnostics.observed_residuals[-1]))
+            if getattr(diagnostics, "min_eigenvalue", None) is not None:
+                lrmc_min_eigenvalues.append(float(diagnostics.min_eigenvalue))
+            if getattr(diagnostics, "min_singular_value", None) is not None:
+                lrmc_min_singular_values.append(float(diagnostics.min_singular_value))
         per_sample_rmse.append(periodic_rmse_deg(predictions, doa_deg))
 
     rmse_deg = float(np.mean(per_sample_rmse))
+    avg_runtime_sec = float(np.mean(per_sample_runtime)) if per_sample_runtime else None
+    avg_lrmc_runtime_sec = float(np.mean(lrmc_runtimes)) if lrmc_runtimes else None
+    avg_lrmc_iterations = float(np.mean(lrmc_iterations)) if lrmc_iterations else None
+    lrmc_convergence_rate = float(np.mean(lrmc_convergence)) if lrmc_convergence else None
+    avg_lrmc_residual = float(np.mean(lrmc_residuals)) if lrmc_residuals else None
+    min_lrmc_eigenvalue = float(np.min(lrmc_min_eigenvalues)) if lrmc_min_eigenvalues else None
+    min_lrmc_singular_value = float(np.min(lrmc_min_singular_values)) if lrmc_min_singular_values else None
     save_json(
         result_dir / "metrics.json",
         {
             "template_name": template["template_name"],
             "method_name": method_name,
             "rmse_deg": rmse_deg,
+            "avg_runtime_sec": avg_runtime_sec,
+            "avg_lrmc_runtime_sec": avg_lrmc_runtime_sec,
+            "avg_lrmc_iterations": avg_lrmc_iterations,
+            "lrmc_convergence_rate": lrmc_convergence_rate,
+            "avg_lrmc_final_residual": avg_lrmc_residual,
+            "min_lrmc_eigenvalue": min_lrmc_eigenvalue,
+            "min_lrmc_singular_value": min_lrmc_singular_value,
             "num_test_samples": len(generic_test_dataset),
         },
     )
-    return {"scheme": template["template_name"], "method": method_name, "rmse_deg": rmse_deg}
+    return {
+        "scheme": template["template_name"],
+        "method": method_name,
+        "rmse_deg": rmse_deg,
+        "avg_runtime_sec": avg_runtime_sec,
+        "avg_lrmc_runtime_sec": avg_lrmc_runtime_sec,
+        "avg_lrmc_iterations": avg_lrmc_iterations,
+        "lrmc_convergence_rate": lrmc_convergence_rate,
+        "avg_lrmc_final_residual": avg_lrmc_residual,
+        "min_lrmc_eigenvalue": min_lrmc_eigenvalue,
+        "min_lrmc_singular_value": min_lrmc_singular_value,
+    }
 
 
 def evaluate_subspacenet_rmse_deg(model, test_dataset: List) -> float:
@@ -443,9 +487,24 @@ def run_experiment(repo_root: Path, template: Dict, results_root: Path) -> List[
 def write_summary(results: List[Dict], results_root: Path):
     table_path = results_root / "summary.csv"
     with table_path.open("w", encoding="utf-8", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=["scheme", "method", "rmse_deg"])
+        writer = csv.DictWriter(
+            handle,
+            fieldnames=[
+                "scheme",
+                "method",
+                "rmse_deg",
+                "avg_runtime_sec",
+                "avg_lrmc_runtime_sec",
+                "avg_lrmc_iterations",
+                "lrmc_convergence_rate",
+                "avg_lrmc_final_residual",
+                "min_lrmc_eigenvalue",
+                "min_lrmc_singular_value",
+            ],
+        )
         writer.writeheader()
-        writer.writerows(results)
+        for item in results:
+            writer.writerow(item)
 
     labels = [f"{item['scheme']}\n{item['method']}" for item in results]
     values = [item["rmse_deg"] for item in results]
@@ -467,6 +526,9 @@ def write_summary(results: List[Dict], results_root: Path):
 
 def write_configured_markdowns(results: List[Dict], selected_templates: List[Dict], results_root: Path):
     markdown_groups = {}
+    template_report_map = {
+        template["template_name"]: template.get("report", {}) for template in selected_templates
+    }
     for template in selected_templates:
         report = template.get("report", {})
         output_name = report.get("markdown_output")
@@ -487,6 +549,10 @@ def write_configured_markdowns(results: List[Dict], selected_templates: List[Dic
         group_results = [item for item in results if item["scheme"] in config["schemes"]]
         if not group_results:
             continue
+        has_group_labels = any(
+            template_report_map.get(scheme, {}).get("markdown_group_label")
+            for scheme in config["schemes"]
+        )
         lines = [f"# {config['title']}", ""]
         if config["description"]:
             lines.extend([config["description"], ""])
@@ -495,22 +561,39 @@ def write_configured_markdowns(results: List[Dict], selected_templates: List[Dic
             for condition in config["conditions"]:
                 lines.append(f"- {condition}")
             lines.append("")
-        lines.extend([
-            "| Algorithm | RMSE (deg) |",
-            "| --- | ---: |",
-        ])
-        sorted_results = sorted(
-            group_results,
-            key=lambda item: PAPER_MARKDOWN_LABELS.get(
-                (item["scheme"], item["method"]), f"{item['scheme']} / {item['method']}"
-            ),
-        )
-        for item in sorted_results:
-            label = PAPER_MARKDOWN_LABELS.get(
-                (item["scheme"], item["method"]),
-                f"{item['scheme']} / {item['method']}",
+        if has_group_labels:
+            lines.extend(
+                [
+                    "| Geometry | Processing | Method | RMSE (deg) |",
+                    "| --- | --- | --- | ---: |",
+                ]
             )
-            lines.append(f"| {label} | {item['rmse_deg']:.4f} |")
+        else:
+            lines.extend([
+                "| Algorithm | RMSE (deg) |",
+                "| --- | ---: |",
+            ])
+
+        def result_sort_key(item):
+            report = template_report_map.get(item["scheme"], {})
+            group_label = report.get("markdown_group_label", "")
+            scheme_label = report.get("markdown_scheme_label")
+            method_label = METHOD_MARKDOWN_LABELS.get(item["method"], item["method"])
+            return (group_label, scheme_label or "", method_label, item["scheme"])
+
+        sorted_results = sorted(group_results, key=result_sort_key)
+        for item in sorted_results:
+            report = template_report_map.get(item["scheme"], {})
+            group_label = report.get("markdown_group_label")
+            scheme_label = report.get("markdown_scheme_label")
+            method_label = METHOD_MARKDOWN_LABELS.get(item["method"], item["method"])
+            if has_group_labels:
+                lines.append(
+                    f"| {group_label or item['scheme']} | {scheme_label or ''} | {method_label} | {item['rmse_deg']:.4f} |"
+                )
+            else:
+                label = f"{scheme_label} | {method_label}" if scheme_label else f"{item['scheme']} / {method_label}"
+                lines.append(f"| {label} | {item['rmse_deg']:.4f} |")
         output_path = results_root / output_name
         output_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 

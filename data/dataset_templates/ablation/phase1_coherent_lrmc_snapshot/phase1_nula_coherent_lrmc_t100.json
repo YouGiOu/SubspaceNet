@@ -1,0 +1,72 @@
+{
+  "experiment_type": "subspace",
+  "methods": [
+    "music",
+    "esprit",
+    "r-music"
+  ],
+  "seed": 42,
+  "commands": {
+    "CREATE_DATA": true,
+    "LOAD_DATA": false,
+    "TRAIN_MODEL": false,
+    "EVALUATE_MODE": true
+  },
+  "system_model": {
+    "N": 4,
+    "M": 2,
+    "snr": 10,
+    "signal_type": "NarrowBand",
+    "signal_nature": "coherent",
+    "eta": 0,
+    "bias": 0,
+    "sv_noise_var": 0,
+    "array_spacing": 0.5,
+    "doa_min": -90.0,
+    "doa_max": 90.0,
+    "doa_resolution": 0.01,
+    "min_doa_gap": 15.0,
+    "sensor_positions": [
+      0,
+      1,
+      4,
+      8
+    ],
+    "virtual_array_size": 9,
+    "T": 100,
+    "use_lrmc": true,
+    "lrmc_rank": 3,
+    "lrmc_solver": "svd",
+    "lrmc_init_strategy": "lag",
+    "lrmc_enforce_toeplitz": false,
+    "lrmc_max_iter": 100,
+    "lrmc_tol": 1e-06,
+    "lrmc_epsilon": 1e-08
+  },
+  "model": {
+    "tau": 3
+  },
+  "dataset": {
+    "samples_size": 4096,
+    "train_test_ratio": 0.2
+  },
+  "report": {
+    "markdown_output": "phase1_coherent_lrmc_snapshot_results.md",
+    "markdown_title": "Phase 1A - Coherent NULA LRMC Snapshot Ablation",
+    "markdown_description": "Phase 1A evaluates whether default LRMC improves coherent-signal subspace estimation on NULA across a snapshot sweep, before any LRMC tuning or SubspaceNet retraining.",
+    "markdown_conditions": [
+      "Array: NULA [0, 1, 4, 8] on a 0.5 lambda grid",
+      "Signals: 2 coherent narrowband sources",
+      "SNR: 10 dB",
+      "DOA range: [-90 deg, 90 deg]",
+      "Minimum separation: 15 deg",
+      "Methods: MUSIC, Root-MUSIC, ESPRIT",
+      "Phase 1 focus: snapshot sensitivity and default LRMC benefit",
+      "Snapshot sweep: T in {50, 100, 200, 400}",
+      "Metric: DOA RMSE in degrees (periodic matching)"
+    ],
+    "write_summary_csv": true,
+    "markdown_scheme_label": "Default LRMC (T=100)"
+  },
+  "description": "Phase 1 coherent NULA with default LRMC at T=100."
+}

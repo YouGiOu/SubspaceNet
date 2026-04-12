@@ -36,9 +36,68 @@ from tqdm import tqdm
 from src.signal_creation import Samples
 from pathlib import Path
 from src.system_model import SystemModelParams
-from src.lrmc import complete_nula_covariance, covariance_to_autocorrelation_tensor
+from src.lrmc import (
+    complete_nula_covariance,
+    complete_nula_covariance_from_covariance,
+    complete_rowwise_nula_covariance,
+    covariance_to_autocorrelation_tensor,
+)
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+
+def _is_2d_geometry(system_model_params: SystemModelParams) -> bool:
+    geometry_name = getattr(system_model_params, "geometry_name", None)
+    physical_sensor_positions_2d = getattr(
+        system_model_params, "physical_sensor_positions_2d", None
+    )
+    return bool(
+        physical_sensor_positions_2d is not None
+        or (
+            isinstance(geometry_name, str)
+            and geometry_name.startswith("mimo_2d_12ch")
+        )
+    )
+
+
+def _sample_constrained_angles(
+    count: int,
+    lower: float,
+    upper: float,
+    resolution: float,
+    min_gap: float,
+):
+    decimals = max(0, int(np.ceil(-np.log10(resolution)))) if resolution < 1 else 0
+    while True:
+        values = np.round(np.random.uniform(low=lower, high=upper, size=count), decimals=decimals)
+        values.sort()
+        if count <= 1:
+            return values
+        diff_angles = np.array([np.abs(values[i + 1] - values[i]) for i in range(count - 1)])
+        if np.sum(diff_angles >= min_gap) == count - 1:
+            return values
+
+
+def _sample_2d_doa_pairs(system_model_params: SystemModelParams):
+    lower = float(getattr(system_model_params, "doa_min", -15.0))
+    upper = float(getattr(system_model_params, "doa_max", 15.0))
+    elevation_lower = float(getattr(system_model_params, "elevation_min", lower))
+    elevation_upper = float(getattr(system_model_params, "elevation_max", upper))
+    resolution = float(getattr(system_model_params, "doa_resolution", 0.01))
+    min_gap = float(getattr(system_model_params, "min_doa_gap", 5.0))
+    azimuths = _sample_constrained_angles(
+        count=int(system_model_params.M),
+        lower=lower,
+        upper=upper,
+        resolution=resolution,
+        min_gap=min_gap,
+    )
+    elevations = np.round(
+        np.random.uniform(low=elevation_lower, high=elevation_upper, size=int(system_model_params.M)),
+        decimals=max(0, int(np.ceil(-np.log10(resolution)))) if resolution < 1 else 0,
+    )
+    doa_pairs = list(zip(azimuths.tolist(), elevations.tolist()))
+    return doa_pairs
 
 
 def build_subspacenet_input(
@@ -57,20 +116,77 @@ def build_subspacenet_input(
         rank = getattr(system_model_params, "lrmc_rank", None)
         if rank is None:
             rank = int(system_model_params.M) + 1
-        _, _, _, completed_covariance, diagnostics = complete_nula_covariance(
-            X=np.asarray(X.cpu().numpy(), dtype=np.complex128),
-            sensor_positions=sensor_positions,
-            virtual_size=int(virtual_size),
-            rank=int(rank),
-            solver=getattr(system_model_params, "lrmc_solver", "svd"),
-            init_strategy=getattr(system_model_params, "lrmc_init_strategy", "lag"),
-            max_iter=int(getattr(system_model_params, "lrmc_max_iter", 100)),
-            tol=float(getattr(system_model_params, "lrmc_tol", 1e-6)),
-            epsilon=float(getattr(system_model_params, "lrmc_epsilon", 1e-8)),
-            enforce_toeplitz=bool(
-                getattr(system_model_params, "lrmc_enforce_toeplitz", False)
-            ),
-        )
+        covariance = np.cov(np.asarray(X.cpu().numpy(), dtype=np.complex128))
+        row_groups = getattr(system_model_params, "row_groups", None)
+        covariance_mode = str(
+            getattr(system_model_params, "covariance_mode", "lrmc")
+        ).lower()
+        if row_groups and covariance_mode == "ss_then_lrmc":
+            _, _, _, completed_covariance, diagnostics = complete_rowwise_nula_covariance(
+                covariance=covariance,
+                row_groups=row_groups,
+                sensor_positions=sensor_positions,
+                virtual_size=int(virtual_size),
+                rank=int(rank),
+                solver=getattr(system_model_params, "lrmc_solver", "svd"),
+                init_strategy=getattr(system_model_params, "lrmc_init_strategy", "lag"),
+                max_iter=int(getattr(system_model_params, "lrmc_max_iter", 100)),
+                tol=float(getattr(system_model_params, "lrmc_tol", 1e-6)),
+                epsilon=float(getattr(system_model_params, "lrmc_epsilon", 1e-8)),
+                enforce_toeplitz=bool(
+                    getattr(system_model_params, "lrmc_enforce_toeplitz", False)
+                ),
+                variant="average_raw",
+            )
+        elif row_groups and covariance_mode in {"lrmc_only", "lrmc"}:
+            _, _, _, completed_covariance, diagnostics = complete_rowwise_nula_covariance(
+                covariance=covariance,
+                row_groups=row_groups,
+                sensor_positions=sensor_positions,
+                virtual_size=int(virtual_size),
+                rank=int(rank),
+                solver=getattr(system_model_params, "lrmc_solver", "svd"),
+                init_strategy=getattr(system_model_params, "lrmc_init_strategy", "lag"),
+                max_iter=int(getattr(system_model_params, "lrmc_max_iter", 100)),
+                tol=float(getattr(system_model_params, "lrmc_tol", 1e-6)),
+                epsilon=float(getattr(system_model_params, "lrmc_epsilon", 1e-8)),
+                enforce_toeplitz=bool(
+                    getattr(system_model_params, "lrmc_enforce_toeplitz", False)
+                ),
+                variant="canonical",
+            )
+        elif row_groups and covariance_mode == "lrmc_then_ss":
+            _, _, _, completed_covariance, diagnostics = complete_rowwise_nula_covariance(
+                covariance=covariance,
+                row_groups=row_groups,
+                sensor_positions=sensor_positions,
+                virtual_size=int(virtual_size),
+                rank=int(rank),
+                solver=getattr(system_model_params, "lrmc_solver", "svd"),
+                init_strategy=getattr(system_model_params, "lrmc_init_strategy", "lag"),
+                max_iter=int(getattr(system_model_params, "lrmc_max_iter", 100)),
+                tol=float(getattr(system_model_params, "lrmc_tol", 1e-6)),
+                epsilon=float(getattr(system_model_params, "lrmc_epsilon", 1e-8)),
+                enforce_toeplitz=bool(
+                    getattr(system_model_params, "lrmc_enforce_toeplitz", False)
+                ),
+                variant="average_completed",
+            )
+        else:
+            _, _, _, completed_covariance, diagnostics = complete_nula_covariance_from_covariance(
+                covariance=covariance,
+                sensor_positions=sensor_positions,
+                virtual_size=int(virtual_size),
+                rank=int(rank),
+                solver=getattr(system_model_params, "lrmc_solver", "svd"),
+                init_strategy=getattr(system_model_params, "lrmc_init_strategy", "lag"),
+                max_iter=int(getattr(system_model_params, "lrmc_max_iter", 100)),
+                tol=float(getattr(system_model_params, "lrmc_tol", 1e-6)),
+                epsilon=float(getattr(system_model_params, "lrmc_epsilon", 1e-8)),
+                enforce_toeplitz=bool(
+                    getattr(system_model_params, "lrmc_enforce_toeplitz", False)
+                ),
+            )
         if diagnostics.min_singular_value is not None and diagnostics.min_singular_value <= 0:
             raise AssertionError(
                 "build_subspacenet_input: completed covariance is numerically unstable"
@@ -139,7 +255,14 @@ def create_dataset(
     else:
         for i in tqdm(range(samples_size)):
             # Samples model creation
-            samples_model.set_doa(true_doa)
+            if _is_2d_geometry(system_model_params):
+                if true_doa is None:
+                    doa_pairs = _sample_2d_doa_pairs(system_model_params)
+                else:
+                    doa_pairs = true_doa
+                samples_model.set_doa_2d(doa_pairs)
+            else:
+                samples_model.set_doa(true_doa)
             # Observations matrix creation
             X = torch.tensor(
                 samples_model.samples_creation(
@@ -451,6 +574,9 @@ def get_experiment_suffix(system_model_params: SystemModelParams):
     template_name = getattr(system_model_params, "template_name", None)
     if template_name:
         suffix += f"tpl={template_name}_"
+    geometry_name = getattr(system_model_params, "geometry_name", None)
+    if geometry_name:
+        suffix += f"geo={geometry_name}_"
     sensor_positions = getattr(system_model_params, "sensor_positions", None)
     if sensor_positions is not None:
         geometry = "-".join(str(int(pos)) for pos in sensor_positions)

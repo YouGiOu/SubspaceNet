@@ -1,0 +1,6 @@
+{
+  "template_name": "phase1f_nula_coherent_lrmc_fba_ss_t200",
+  "method_name": "r-music",
+  "rmse_deg": 10.308484536079007,
+  "num_test_samples": 819
+}

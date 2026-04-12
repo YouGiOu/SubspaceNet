@@ -1,0 +1,6 @@
+{
+  "template_name": "phase1c_nula_coherent_lrmc_no_toeplitz_t200",
+  "method_name": "music",
+  "rmse_deg": 11.705147567108137,
+  "num_test_samples": 819
+}

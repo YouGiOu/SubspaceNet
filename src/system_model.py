@@ -52,8 +52,14 @@ class SystemModelParams:
     bias = 0  # Sensor bias deviation
     sv_noise_var = 0  # Steering vector added noise variance
     array_spacing = 0.5  # Base spacing in wavelength units for narrowband arrays
+    geometry_name = None  # Optional geometry identifier for derived array layouts
+    physical_sensor_positions_2d: Optional[Sequence[Sequence[float]]] = None
+    row_groups: Optional[Sequence[Sequence[int]]] = None
+    canonical_row_group = None
     doa_min = -90.0  # Minimal sampled DOA in degrees
     doa_max = 90.0  # Maximal sampled DOA in degrees
+    elevation_min = None  # Optional elevation sampling lower bound in degrees
+    elevation_max = None  # Optional elevation sampling upper bound in degrees
     doa_resolution = 0.01  # Sampling resolution in degrees for random DOA generation
     min_doa_gap = 15.0  # Minimal gap between sampled DOAs in degrees
     sensor_positions: Optional[Sequence[float]] = None  # Explicit array geometry
@@ -66,6 +72,8 @@ class SystemModelParams:
     lrmc_tol = 1e-6  # LRMC convergence tolerance
     lrmc_epsilon = 1e-8  # Numerical floor for LRMC PSD projection
     lrmc_enforce_toeplitz = False  # Whether to project onto Toeplitz matrices
+    lrmc_nuclear_ridge = 1e-8  # Small Frobenius regularizer for strict convexity
+    lrmc_postprocessing = "none"  # Optional post-LRMC decorrelation strategy
     template_name = None  # Dataset template identifier
 
     def set_parameter(self, name: str, value):
@@ -153,6 +161,37 @@ class SystemModel(object):
 
     def create_array(self):
         """create an array of sensors locations"""
+        physical_sensor_positions_2d = getattr(
+            self.params, "physical_sensor_positions_2d", None
+        )
+        if physical_sensor_positions_2d is not None:
+            physical_sensor_positions_2d = np.asarray(
+                physical_sensor_positions_2d, dtype=float
+            )
+            if physical_sensor_positions_2d.ndim != 2 or physical_sensor_positions_2d.shape[1] != 2:
+                raise ValueError(
+                    "SystemModel.create_array: physical_sensor_positions_2d must have shape [N, 2]"
+                )
+            if physical_sensor_positions_2d.shape[0] != self.params.N:
+                raise ValueError(
+                    "SystemModel.create_array: physical_sensor_positions_2d row count must equal N"
+                )
+            self.array = physical_sensor_positions_2d
+            return
+
+        geometry_name = getattr(self.params, "geometry_name", None)
+        if isinstance(geometry_name, str) and geometry_name.startswith("mimo_2d_12ch"):
+            from src.radar_array_geometry import get_mimo_2d_12ch_geometry
+
+            geometry = get_mimo_2d_12ch_geometry(
+                array_spacing=float(getattr(self.params, "array_spacing", 1.9))
+            )
+            self.array = geometry.sensor_positions_2d
+            self.params.physical_sensor_positions_2d = geometry.sensor_positions_2d
+            self.params.row_groups = geometry.row_groups
+            self.params.canonical_row_group = geometry.canonical_row_group
+            return
+
         sensor_positions = getattr(self.params, "sensor_positions", None)
         if sensor_positions is not None:
             sensor_positions = np.asarray(sensor_positions, dtype=float)
@@ -169,6 +208,22 @@ class SystemModel(object):
             self.array = sensor_positions
         else:
             self.array = np.linspace(0, self.params.N, self.params.N, endpoint=False)
+
+    def steering_vec_2d(self, azimuth_rad: float, elevation_rad: float):
+        """Computes the steering vector for a 2D array geometry."""
+        if self.array.ndim != 2 or self.array.shape[1] != 2:
+            raise ValueError(
+                "SystemModel.steering_vec_2d: array must contain 2D coordinates"
+            )
+        wavelength = 1.0
+        k = 2 * np.pi / wavelength
+        cos_el = np.cos(elevation_rad)
+        sin_el = np.sin(elevation_rad)
+        sin_az = np.sin(azimuth_rad)
+        x = self.array[:, 0]
+        y = self.array[:, 1]
+        phase = -(k * (x * cos_el * sin_az + y * sin_el))
+        return np.exp(1j * phase)
 
     def steering_vec(
         self, theta: np.ndarray, f: float = 1, array_form="ULA", nominal=False

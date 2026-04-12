@@ -1,0 +1,10 @@
+scheme,method,rmse_deg
+phase1d_nula_coherent_no_lrmc_t200,music,26.19464999763801
+phase1d_nula_coherent_no_lrmc_t200,esprit,30.961830522034532
+phase1d_nula_coherent_no_lrmc_t200,r-music,31.143703546775384
+phase1d_nula_coherent_lrmc_svd_t200,music,10.302565520728743
+phase1d_nula_coherent_lrmc_svd_t200,esprit,10.10740122137859
+phase1d_nula_coherent_lrmc_svd_t200,r-music,9.95525235959837
+phase1d_nula_coherent_lrmc_nuclear_t200,music,14.241369805078715
+phase1d_nula_coherent_lrmc_nuclear_t200,esprit,13.581874223170242
+phase1d_nula_coherent_lrmc_nuclear_t200,r-music,13.582852104531586

@@ -1,0 +1,13 @@
+{
+  "template_name": "phase2b_2d_0p5_lrmc_ss",
+  "method_name": "music",
+  "rmse_deg": 5.395631604445524,
+  "avg_runtime_sec": 0.45749401575090826,
+  "avg_lrmc_runtime_sec": 0.049154168498161926,
+  "avg_lrmc_iterations": 95.02442002442002,
+  "lrmc_convergence_rate": 0.031746031746031744,
+  "avg_lrmc_final_residual": 1.9268102281541125e-17,
+  "min_lrmc_eigenvalue": 1e-08,
+  "min_lrmc_singular_value": 9.99967036063002e-09,
+  "num_test_samples": 819
+}
