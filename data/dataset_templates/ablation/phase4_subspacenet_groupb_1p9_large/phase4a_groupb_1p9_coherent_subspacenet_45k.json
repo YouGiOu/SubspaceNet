@@ -9,6 +9,7 @@
   "scenario_data_path": "phase4_subspacenet_groupb_1p9_coherent_large_45k",
   "commands": {
     "CREATE_DATA": true,
+    "CACHE_DATASET": true,
     "LOAD_DATA": false,
     "TRAIN_MODEL": true,
     "EVALUATE_MODE": true

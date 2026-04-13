@@ -185,7 +185,36 @@ def prepare_datasets(
     samples_size = dataset_settings["samples_size"]
     train_test_ratio = dataset_settings["train_test_ratio"]
 
-    if commands.get("CREATE_DATA", False):
+    force_recreate = bool(commands.get("FORCE_RECREATE_DATA", False))
+    prefer_cached_data = bool(
+        commands.get("LOAD_DATA", False)
+        or commands.get("CACHE_DATASET", False)
+        or commands.get("CREATE_DATA", False)
+    ) and not force_recreate
+
+    loaded = None
+    if prefer_cached_data:
+        try:
+            loaded = load_datasets(
+                system_model_params=system_model_params,
+                model_type=model_type,
+                samples_size=samples_size,
+                datasets_path=datasets_path,
+                train_test_ratio=train_test_ratio,
+                is_training=need_training_split,
+            )
+            print(
+                f"Using cached dataset for {template['template_name']} from {datasets_path}"
+            )
+        except Exception:
+            loaded = None
+
+    if loaded is None and commands.get("LOAD_DATA", False) and not commands.get("CREATE_DATA", False):
+        raise Exception(
+            f"prepare_datasets: cached dataset requested for {template['template_name']}, but it does not exist"
+        )
+
+    if loaded is None and commands.get("CREATE_DATA", False):
         train_dataset = None
         if need_training_split:
             train_dataset, _, _ = create_dataset(
@@ -210,14 +239,16 @@ def prepare_datasets(
         )
         return train_dataset, test_dataset, generic_test_dataset, samples_model, datasets_path
 
-    loaded = load_datasets(
-        system_model_params=system_model_params,
-        model_type=model_type,
-        samples_size=samples_size,
-        datasets_path=datasets_path,
-        train_test_ratio=train_test_ratio,
-        is_training=need_training_split,
-    )
+    if loaded is None:
+        loaded = load_datasets(
+            system_model_params=system_model_params,
+            model_type=model_type,
+            samples_size=samples_size,
+            datasets_path=datasets_path,
+            train_test_ratio=train_test_ratio,
+            is_training=need_training_split,
+        )
+
     if need_training_split:
         train_dataset, test_dataset, generic_test_dataset, samples_model = loaded
     else:
