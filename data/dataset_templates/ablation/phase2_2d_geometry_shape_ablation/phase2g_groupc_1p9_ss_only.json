@@ -32,8 +32,8 @@
     "min_doa_gap": 5.0,
     "sensor_positions": [
       0,
-      1,
       4,
+      7,
       8
     ],
     "physical_sensor_positions_2d": [
@@ -137,5 +137,5 @@
     "markdown_scheme_label": "Spatial smoothing only",
     "markdown_group_label": "Group C @ 1.9 lambda"
   },
-  "description": "Phase 2 group-A 1.9 lambda spatial smoothing only."
+  "description": "Phase 2 group-C 1.9 lambda spatial smoothing only."
 }

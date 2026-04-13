@@ -2,7 +2,7 @@
   "template_name": "phase2g_groupb_0p5_ss_only",
   "method_name": "r-music",
   "rmse_deg": 15.659537572341048,
-  "avg_runtime_sec": 0.0006558306471289288,
+  "avg_runtime_sec": 0.0007286152625135952,
   "avg_lrmc_runtime_sec": null,
   "avg_lrmc_iterations": null,
   "lrmc_convergence_rate": null,

@@ -2,7 +2,7 @@
   "template_name": "phase2g_groupb_1p9_ss_only",
   "method_name": "esprit",
   "rmse_deg": 5.692678956158755,
-  "avg_runtime_sec": 0.00046905128204596976,
+  "avg_runtime_sec": 0.0005704484737456395,
   "avg_lrmc_runtime_sec": null,
   "avg_lrmc_iterations": null,
   "lrmc_convergence_rate": null,

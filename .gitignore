@@ -10,3 +10,5 @@ data/*
 !data/dataset_templates/
 !data/dataset_templates/**/
 !data/dataset_templates/**/*.json
+# ignore long checkpoint files that cause Windows path length errors
+results/ablation/subspacenet_ula_non-coherent/root-music/checkpoints/

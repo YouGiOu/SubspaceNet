@@ -1,0 +1,13 @@
+{
+  "template_name": "phase2g_groupc_0p5_lrmc_only",
+  "method_name": "r-music",
+  "rmse_deg": 14.437584407373466,
+  "avg_runtime_sec": 0.021025204761900746,
+  "avg_lrmc_runtime_sec": 0.018963819169729258,
+  "avg_lrmc_iterations": 95.47252747252747,
+  "lrmc_convergence_rate": 0.13797313797313798,
+  "avg_lrmc_final_residual": 2.1196129443139243e-17,
+  "min_lrmc_eigenvalue": 1e-08,
+  "min_lrmc_singular_value": 9.999671451163963e-09,
+  "num_test_samples": 819
+}

@@ -1,13 +1,13 @@
 {
   "template_name": "phase2g_groupb_0p5_ss_lrmc",
   "method_name": "music",
-  "rmse_deg": 22.677788663517756,
-  "avg_runtime_sec": 0.09427878559218351,
-  "avg_lrmc_runtime_sec": 0.016776946398046774,
-  "avg_lrmc_iterations": 93.84981684981685,
-  "lrmc_convergence_rate": 0.21978021978021978,
-  "avg_lrmc_final_residual": 2.5331132089068392e-17,
+  "rmse_deg": 6.7063122777400705,
+  "avg_runtime_sec": 0.10489429401709446,
+  "avg_lrmc_runtime_sec": 0.019194462637362172,
+  "avg_lrmc_iterations": 96.83516483516483,
+  "lrmc_convergence_rate": 0.12454212454212454,
+  "avg_lrmc_final_residual": 2.1047967528831394e-17,
   "min_lrmc_eigenvalue": 1e-08,
-  "min_lrmc_singular_value": 9.999766642651487e-09,
+  "min_lrmc_singular_value": 9.999786358123983e-09,
   "num_test_samples": 819
 }

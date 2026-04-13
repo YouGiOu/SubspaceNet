@@ -1,0 +1,71 @@
+{
+  "experiment_type": "subspace",
+  "methods": [
+    "music",
+    "esprit",
+    "r-music"
+  ],
+  "seed": 42,
+  "commands": {
+    "CREATE_DATA": true,
+    "LOAD_DATA": false,
+    "TRAIN_MODEL": false,
+    "EVALUATE_MODE": true
+  },
+  "system_model": {
+    "N": 4,
+    "M": 2,
+    "T": 200,
+    "snr": 10,
+    "signal_type": "NarrowBand",
+    "signal_nature": "coherent",
+    "eta": 0,
+    "bias": 0,
+    "sv_noise_var": 0,
+    "array_spacing": 1.9,
+    "doa_min": -15.0,
+    "doa_max": 15.0,
+    "doa_resolution": 0.01,
+    "min_doa_gap": 5.0,
+    "sensor_positions": [
+      0,
+      1,
+      4,
+      8
+    ],
+    "virtual_array_size": 9,
+    "use_lrmc": true,
+    "lrmc_rank": 3,
+    "lrmc_solver": "svd",
+    "lrmc_init_strategy": "lag",
+    "lrmc_postprocessing": "none",
+    "lrmc_enforce_toeplitz": false,
+    "lrmc_max_iter": 100,
+    "lrmc_tol": 1e-06,
+    "lrmc_epsilon": 1e-08
+  },
+  "model": {
+    "tau": 3
+  },
+  "dataset": {
+    "samples_size": 4096,
+    "train_test_ratio": 0.2
+  },
+  "report": {
+    "markdown_output": "phase3d_nula_pattern_control_1p9_results.md",
+    "markdown_title": "Phase 3d - 1D NULA Pattern Control at 1.9 Lambda",
+    "markdown_description": "Direct 1D control comparison between [0,1,4,8] and [0,4,7,8] under the same 1.9 lambda coherent setup.",
+    "markdown_conditions": [
+      "Array: 1D sparse NULA [0, 1, 4, 8]",
+      "Physical spacing: 1.9 lambda",
+      "Sources: 2 coherent narrowband targets",
+      "Snapshots: T = 200",
+      "FOV: [-15 deg, 15 deg]",
+      "Minimum separation: 5 deg"
+    ],
+    "write_summary_csv": true,
+    "markdown_scheme_label": "LRMC",
+    "markdown_group_label": "Pattern A [0,1,4,8]"
+  },
+  "description": "Phase 3d Pattern A [0,1,4,8] LRMC at 1.9 lambda."
+}

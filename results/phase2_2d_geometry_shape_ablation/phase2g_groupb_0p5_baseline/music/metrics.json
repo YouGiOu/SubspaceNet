@@ -1,8 +1,8 @@
 {
   "template_name": "phase2g_groupb_0p5_baseline",
   "method_name": "music",
-  "rmse_deg": 11.814366777087576,
-  "avg_runtime_sec": 0.07434513052502927,
+  "rmse_deg": 9.020369356431656,
+  "avg_runtime_sec": 0.0760432166056173,
   "avg_lrmc_runtime_sec": null,
   "avg_lrmc_iterations": null,
   "lrmc_convergence_rate": null,

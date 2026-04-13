@@ -32,8 +32,8 @@
     "min_doa_gap": 5.0,
     "sensor_positions": [
       0,
-      1,
       4,
+      7,
       8
     ],
     "physical_sensor_positions_2d": [
@@ -132,6 +132,7 @@
     "markdown_description": "Phase 2 compares rectangular Group A and slanted Group B layouts at 0.5 and 1.9 lambda to separate topology and spacing effects.",
     "markdown_conditions": [
       "Array: 12-channel 2D geometry derived from the phase-2 array layouts",
+      "Geometry: Group B @ 1.9 lambda",
       "Geometry group: Group B @ 1.9 lambda",
       "Physical spacing: 1.9 lambda",
       "Azimuth and elevation range: [-15 deg, 15 deg]",
@@ -142,7 +143,8 @@
       "Metric: horizontal-angle RMSE in degrees"
     ],
     "write_summary_csv": true,
-    "markdown_scheme_label": "Group B @ 1.9 lambda"
+    "markdown_scheme_label": "LRMC only",
+    "markdown_group_label": "Group B @ 1.9 lambda"
   },
   "description": "Phase 2 group-B 1.9 lambda LRMC only.",
   "template_name": "phase2g_groupb_1p9_lrmc_only",

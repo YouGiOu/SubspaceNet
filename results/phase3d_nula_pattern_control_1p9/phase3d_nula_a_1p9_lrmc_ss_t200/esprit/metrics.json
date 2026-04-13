@@ -1,0 +1,13 @@
+{
+  "template_name": "phase3d_nula_a_1p9_lrmc_ss_t200",
+  "method_name": "esprit",
+  "rmse_deg": 2.72207707539553,
+  "avg_runtime_sec": 0.017904082905983606,
+  "avg_lrmc_runtime_sec": 0.016712279853478822,
+  "avg_lrmc_iterations": 95.62148962148962,
+  "lrmc_convergence_rate": 0.0927960927960928,
+  "avg_lrmc_final_residual": 0.0,
+  "min_lrmc_eigenvalue": 1e-08,
+  "min_lrmc_singular_value": 9.999696406713362e-09,
+  "num_test_samples": 819
+}

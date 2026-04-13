@@ -2,7 +2,7 @@
   "template_name": "phase2g_groupa_1p9_ss_only",
   "method_name": "music",
   "rmse_deg": 0.1427642632957011,
-  "avg_runtime_sec": 0.07276553736263354,
+  "avg_runtime_sec": 0.08608792478632692,
   "avg_lrmc_runtime_sec": null,
   "avg_lrmc_iterations": null,
   "lrmc_convergence_rate": null,
