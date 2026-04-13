@@ -129,12 +129,16 @@
     "train_test_ratio": 0.2
   },
   "training": {
-    "batch_size": 64,
-    "epochs": 200,
-    "learning_rate": 5e-06,
+    "batch_size": 128,
+    "validation_batch_size": 256,
+    "num_workers": 4,
+    "pin_memory": true,
+    "persistent_workers": true,
+    "epochs": 120,
+    "learning_rate": 1e-05,
     "weight_decay": 1e-09,
-    "scheduler_step_size": 120,
-    "scheduler_gamma": 0.2
+    "scheduler_step_size": 70,
+    "scheduler_gamma": 0.3
   },
   "report": {
     "markdown_output": "phase4_subspacenet_groupb_1p9_coherent_large_results.md",
@@ -158,4 +162,6 @@
     "markdown_scheme_label": "Group B @ 1.9 lambda | coherent | SS -> LRMC | 45k"
   }
 }
+
+
 

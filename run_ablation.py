@@ -389,6 +389,12 @@ def train_subspacenet_variant(
     simulation_parameters = (
         TrainingParams()
         .set_batch_size(training_settings["batch_size"])
+        .set_validation_batch_size(training_settings.get("validation_batch_size"))
+        .set_dataloader_options(
+            num_workers=training_settings.get("num_workers", 0),
+            pin_memory=training_settings.get("pin_memory"),
+            persistent_workers=training_settings.get("persistent_workers"),
+        )
         .set_epochs(training_settings["epochs"])
         .set_model(model=model_config)
         .set_optimizer(

@@ -77,8 +77,8 @@ def evaluate_dnn_model(
             X, DOA = data
             test_length += DOA.shape[0]
             # Convert observations and DoA to device
-            X = X.to(device)
-            DOA = DOA.to(device)
+            X = X.to(device, non_blocking=True)
+            DOA = DOA.to(device, non_blocking=True)
             # Get model output
             model_output = model(X)
             if model_type.startswith("DA-MUSIC"):

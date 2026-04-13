@@ -93,6 +93,51 @@ class TrainingParams(object):
         self.batch_size = batch_size
         return self
 
+    def set_validation_batch_size(self, validation_batch_size: int = None):
+        """
+        Sets the validation batch size.
+
+        Args
+        ----
+        - validation_batch_size (int): The validation batch size.
+
+        Returns
+        -------
+        self
+        """
+        if validation_batch_size is None:
+            validation_batch_size = getattr(self, "batch_size", 1)
+        self.validation_batch_size = validation_batch_size
+        return self
+
+    def set_dataloader_options(
+        self,
+        num_workers: int = 0,
+        pin_memory: bool = None,
+        persistent_workers: bool = None,
+    ):
+        """
+        Sets DataLoader performance options.
+
+        Args
+        ----
+        - num_workers (int): Number of DataLoader workers.
+        - pin_memory (bool): Whether to pin host memory for GPU transfer.
+        - persistent_workers (bool): Whether to keep workers alive across epochs.
+
+        Returns
+        -------
+        self
+        """
+        self.num_workers = int(num_workers)
+        if pin_memory is None:
+            pin_memory = torch.cuda.is_available()
+        self.pin_memory = bool(pin_memory)
+        if persistent_workers is None:
+            persistent_workers = self.num_workers > 0
+        self.persistent_workers = bool(persistent_workers) and self.num_workers > 0
+        return self
+
     def set_epochs(self, epochs: int):
         """
         Sets the number of epochs for training.
@@ -285,12 +330,32 @@ class TrainingParams(object):
         )
         print("Training DataSet size", len(train_dataset))
         print("Validation DataSet size", len(valid_dataset))
+        num_workers = int(getattr(self, "num_workers", 0))
+        pin_memory = bool(getattr(self, "pin_memory", torch.cuda.is_available()))
+        persistent_workers = bool(
+            getattr(self, "persistent_workers", num_workers > 0)
+        ) and num_workers > 0
+        validation_batch_size = int(
+            getattr(self, "validation_batch_size", getattr(self, "batch_size", 1))
+        )
         # Transform datasets into DataLoader objects
         self.train_dataset = torch.utils.data.DataLoader(
-            train_dataset, batch_size=self.batch_size, shuffle=True, drop_last=False
+            train_dataset,
+            batch_size=self.batch_size,
+            shuffle=True,
+            drop_last=False,
+            num_workers=num_workers,
+            pin_memory=pin_memory,
+            persistent_workers=persistent_workers,
         )
         self.valid_dataset = torch.utils.data.DataLoader(
-            valid_dataset, batch_size=1, shuffle=False, drop_last=False
+            valid_dataset,
+            batch_size=validation_batch_size,
+            shuffle=False,
+            drop_last=False,
+            num_workers=num_workers,
+            pin_memory=pin_memory,
+            persistent_workers=persistent_workers,
         )
         return self
 
@@ -324,6 +389,12 @@ def train(
     """
     # Set the seed for all available random operations
     set_unified_seed()
+    if torch.cuda.is_available():
+        torch.backends.cudnn.benchmark = True
+    try:
+        torch.set_float32_matmul_precision("high")
+    except Exception:
+        pass
     # Current date and time
     print("\n----------------------\n")
     now = datetime.now()
@@ -381,8 +452,9 @@ def train_model(training_params: TrainingParams, model_name: str, checkpoint_pat
             Rx, DOA = data
             train_length += DOA.shape[0]
             # Cast observations and DoA to Variables
-            Rx = Variable(Rx, requires_grad=True).to(device)
-            DOA = Variable(DOA, requires_grad=True).to(device)
+            Rx = Variable(Rx, requires_grad=True).to(device, non_blocking=True)
+            DOA = Variable(DOA, requires_grad=True).to(device, non_blocking=True)
+            optimizer.zero_grad(set_to_none=True)
             # Get model output
             model_output = model(Rx)
             if training_params.model_type.startswith("SubspaceNet"):
@@ -405,8 +477,6 @@ def train_model(training_params: TrainingParams, model_name: str, checkpoint_pat
                 print("linalg error")
             # optimizer update
             optimizer.step()
-            # reset gradients
-            model.zero_grad()
             # add batch loss to overall epoch loss
             if training_params.model_type.startswith("DeepCNN"):
                 # BCE is averaged
