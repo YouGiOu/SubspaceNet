@@ -1,0 +1,144 @@
+{
+  "experiment_type": "subspace",
+  "methods": [
+    "music",
+    "esprit",
+    "r-music"
+  ],
+  "seed": 42,
+  "commands": {
+    "CREATE_DATA": true,
+    "LOAD_DATA": false,
+    "TRAIN_MODEL": false,
+    "EVALUATE_MODE": true
+  },
+  "system_model": {
+    "N": 12,
+    "M": 2,
+    "T": 200,
+    "snr": 10,
+    "signal_type": "NarrowBand",
+    "signal_nature": "non-coherent",
+    "eta": 0,
+    "bias": 0,
+    "sv_noise_var": 0,
+    "array_spacing": 0.5,
+    "geometry_name": "mimo_2d_12ch_groupb_0p5",
+    "doa_min": -15.0,
+    "doa_max": 15.0,
+    "elevation_min": -15.0,
+    "elevation_max": 15.0,
+    "doa_resolution": 0.01,
+    "min_doa_gap": 5.0,
+    "sensor_positions": [
+      0,
+      4,
+      7,
+      8
+    ],
+    "physical_sensor_positions_2d": [
+      [
+        -4.0,
+        -1.0
+      ],
+      [
+        -2.0,
+        -1.0
+      ],
+      [
+        -0.5,
+        -1.0
+      ],
+      [
+        0.0,
+        -1.0
+      ],
+      [
+        -2.0,
+        -0.5
+      ],
+      [
+        0.0,
+        -0.5
+      ],
+      [
+        1.5,
+        -0.5
+      ],
+      [
+        2.0,
+        -0.5
+      ],
+      [
+        0.0,
+        0.0
+      ],
+      [
+        2.0,
+        0.0
+      ],
+      [
+        3.5,
+        0.0
+      ],
+      [
+        4.0,
+        0.0
+      ]
+    ],
+    "row_groups": [
+      [
+        0,
+        1,
+        2,
+        3
+      ],
+      [
+        4,
+        5,
+        6,
+        7
+      ],
+      [
+        8,
+        9,
+        10,
+        11
+      ]
+    ],
+    "canonical_row_group": 2,
+    "virtual_array_size": 9,
+    "covariance_mode": "spatial_smoothing",
+    "use_lrmc": false
+  },
+  "model": {
+    "tau": 3
+  },
+  "dataset": {
+    "samples_size": 4096,
+    "train_test_ratio": 0.2
+  },
+  "report": {
+    "markdown_output": "phase2_2d_geometry_shape_ablation_noncoherent_results.md",
+    "markdown_title": "Phase 2 - 2D Geometry-Shape Non-Coherent Ablation",
+    "markdown_description": "Phase 2 compares rectangular Group A and slanted Group B layouts at 0.5 and 1.9 lambda under non-coherent sources to separate topology and spacing effects.",
+    "markdown_conditions": [
+      "Array: 12-channel 2D geometry derived from the phase-2 array layouts",
+      "Geometry: Group B @ 0.5 lambda",
+      "Geometry group: Group B @ 0.5 lambda",
+      "Physical spacing: 0.5 lambda",
+      "Azimuth and elevation range: [-15 deg, 15 deg]",
+      "Minimum azimuth separation: 5 deg",
+      "Sources: 2 non-coherent narrowband targets",
+      "Snapshots: T = 200",
+      "Methods: MUSIC, Root-MUSIC, ESPRIT",
+      "Metric: horizontal-angle RMSE in degrees"
+    ],
+    "write_summary_csv": true,
+    "markdown_scheme_label": "Spatial smoothing only",
+    "markdown_group_label": "Group B @ 0.5 lambda"
+  },
+  "description": "Phase 2 group-B 0.5 lambda spatial smoothing only.",
+  "template_name": "phase2g_groupb_0p5_ss_only",
+  "template_path": "F:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase2_2d_geometry_shape_noncoherent_ablation\\phase2g_groupb_0p5_ss_only.json"
+}

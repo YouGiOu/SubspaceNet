@@ -1,0 +1,167 @@
+{
+  "description": "Phase 4A coherent SubspaceNet training on the Group B 2D hardware geometry at 1.9 lambda using SS -> LRMC preprocessing and a 45,000-sample dataset.",
+  "experiment_type": "subspacenet",
+  "methods": [
+    "esprit",
+    "root-music"
+  ],
+  "seed": 42,
+  "scenario_data_path": "phase4_subspacenet_groupb_1p9_coherent_large_45k",
+  "commands": {
+    "CREATE_DATA": true,
+    "CACHE_DATASET": true,
+    "LOAD_DATA": false,
+    "TRAIN_MODEL": true,
+    "EVALUATE_MODE": true
+  },
+  "system_model": {
+    "N": 12,
+    "M": 2,
+    "T": 200,
+    "snr": 10,
+    "signal_type": "NarrowBand",
+    "signal_nature": "coherent",
+    "eta": 0,
+    "bias": 0,
+    "sv_noise_var": 0,
+    "array_spacing": 1.9,
+    "geometry_name": "mimo_2d_12ch_groupb_1p9",
+    "doa_min": -15.0,
+    "doa_max": 15.0,
+    "elevation_min": -15.0,
+    "elevation_max": 15.0,
+    "doa_resolution": 0.01,
+    "min_doa_gap": 5.0,
+    "sensor_positions": [
+      0,
+      4,
+      7,
+      8
+    ],
+    "physical_sensor_positions_2d": [
+      [
+        -15.2,
+        -3.8
+      ],
+      [
+        -7.6,
+        -3.8
+      ],
+      [
+        -1.9,
+        -3.8
+      ],
+      [
+        0.0,
+        -3.8
+      ],
+      [
+        -7.6,
+        -1.9
+      ],
+      [
+        0.0,
+        -1.9
+      ],
+      [
+        5.7,
+        -1.9
+      ],
+      [
+        7.6,
+        -1.9
+      ],
+      [
+        0.0,
+        0.0
+      ],
+      [
+        7.6,
+        0.0
+      ],
+      [
+        13.3,
+        0.0
+      ],
+      [
+        15.2,
+        0.0
+      ]
+    ],
+    "row_groups": [
+      [
+        0,
+        1,
+        2,
+        3
+      ],
+      [
+        4,
+        5,
+        6,
+        7
+      ],
+      [
+        8,
+        9,
+        10,
+        11
+      ]
+    ],
+    "canonical_row_group": 2,
+    "virtual_array_size": 9,
+    "covariance_mode": "ss_then_lrmc",
+    "use_lrmc": true,
+    "lrmc_rank": 3,
+    "lrmc_solver": "svd",
+    "lrmc_init_strategy": "lag",
+    "lrmc_postprocessing": "none",
+    "lrmc_enforce_toeplitz": false,
+    "lrmc_max_iter": 100,
+    "lrmc_tol": 1e-06,
+    "lrmc_epsilon": 1e-08
+  },
+  "model": {
+    "model_type": "SubspaceNet",
+    "tau": 8
+  },
+  "dataset": {
+    "samples_size": 45000,
+    "train_test_ratio": 0.2
+  },
+  "training": {
+    "batch_size": 128,
+    "validation_batch_size": 256,
+    "num_workers": 4,
+    "pin_memory": true,
+    "persistent_workers": true,
+    "epochs": 120,
+    "learning_rate": 1e-05,
+    "weight_decay": 1e-09,
+    "scheduler_step_size": 70,
+    "scheduler_gamma": 0.3
+  },
+  "report": {
+    "markdown_output": "phase4_subspacenet_groupb_1p9_coherent_large_results.md",
+    "markdown_title": "Phase 4A - Coherent SubspaceNet on Group B 2D Geometry at 1.9 Lambda",
+    "markdown_description": "Large-sample SubspaceNet training on the Group B hardware geometry using the best classical front end found so far: spatial smoothing before LRMC.",
+    "markdown_conditions": [
+      "Array: Group B 12-channel 2D hardware geometry",
+      "Physical spacing: 1.9 lambda",
+      "Row pattern used for LRMC: [0, 4, 7, 8]",
+      "Preprocessing: spatial smoothing before LRMC",
+      "Signals: 2 coherent narrowband targets",
+      "Snapshots: T = 200",
+      "Azimuth and elevation range: [-15 deg, 15 deg]",
+      "Minimum azimuth separation: 5 deg",
+      "Dataset size: 45,000 samples",
+      "SubspaceNet tau: 8",
+      "Methods: SubspaceNet-ESPRIT and SubspaceNet-Root-MUSIC",
+      "Metric: DOA RMSE in degrees (periodic matching)"
+    ],
+    "write_summary_csv": true,
+    "markdown_scheme_label": "Group B @ 1.9 lambda | coherent | SS -> LRMC | 45k"
+  },
+  "template_name": "phase4a_groupb_1p9_coherent_subspacenet_45k",
+  "template_path": "/root/autodl-tmp/SubspaceNet/data/dataset_templates/ablation/phase4_subspacenet_groupb_1p9_large/phase4a_groupb_1p9_coherent_subspacenet_45k.json"
+}

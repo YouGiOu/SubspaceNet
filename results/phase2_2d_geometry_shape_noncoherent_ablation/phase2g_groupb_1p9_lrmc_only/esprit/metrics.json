@@ -1,0 +1,13 @@
+{
+  "template_name": "phase2g_groupb_1p9_lrmc_only",
+  "method_name": "esprit",
+  "rmse_deg": 0.27918365970970277,
+  "avg_runtime_sec": 0.020003097435900244,
+  "avg_lrmc_runtime_sec": 0.01849014175823919,
+  "avg_lrmc_iterations": 99.45665445665446,
+  "lrmc_convergence_rate": 0.03785103785103785,
+  "avg_lrmc_final_residual": 2.7582671580851194e-17,
+  "min_lrmc_eigenvalue": 1e-08,
+  "min_lrmc_singular_value": 9.99987825132637e-09,
+  "num_test_samples": 819
+}
