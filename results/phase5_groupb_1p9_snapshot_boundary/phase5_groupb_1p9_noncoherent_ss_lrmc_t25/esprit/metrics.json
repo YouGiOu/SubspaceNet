@@ -1,0 +1,13 @@
+{
+  "template_name": "phase5_groupb_1p9_noncoherent_ss_lrmc_t25",
+  "method_name": "esprit",
+  "rmse_deg": 0.5081918721441822,
+  "avg_runtime_sec": 0.016820251770451874,
+  "avg_lrmc_runtime_sec": 0.015510783516482033,
+  "avg_lrmc_iterations": 99.43833943833944,
+  "lrmc_convergence_rate": 0.03418803418803419,
+  "avg_lrmc_final_residual": 2.776720130242423e-17,
+  "min_lrmc_eigenvalue": 1e-08,
+  "min_lrmc_singular_value": 9.999847683558696e-09,
+  "num_test_samples": 819
+}

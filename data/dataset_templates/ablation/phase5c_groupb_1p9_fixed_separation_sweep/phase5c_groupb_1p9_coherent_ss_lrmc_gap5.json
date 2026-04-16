@@ -1,0 +1,151 @@
+{
+    "methods":  [
+                    "music",
+                    "esprit",
+                    "r-music"
+                ],
+    "seed":  42,
+    "dataset":  {
+                    "samples_size":  4096,
+                    "train_test_ratio":  0.2
+                },
+    "description":  "Phase 5C Group B 1.9 lambda coherent fixed-separation study at gap=5 deg with SS -\u003e LRMC.",
+    "report":  {
+                   "markdown_conditions":  [
+                                               "Array: Group B 12-channel 2D hardware geometry",
+                                               "Physical spacing: 1.9 lambda",
+                                               "Snapshots: T = 200",
+                                               "Preprocessing: spatial smoothing before LRMC",
+                                               "Azimuth and elevation range: [-15 deg, 15 deg]",
+                                               "Fixed azimuth separation sweep: 5, 4, 3, 2, 1 deg",
+                                               "Sources: 2 narrowband targets",
+                                               "Methods: MUSIC, Root-MUSIC, ESPRIT",
+                                               "Metric: horizontal-angle RMSE in degrees"
+                                           ],
+                   "markdown_scheme_label":  "Gap = 5 deg | SS -\u003e LRMC",
+                   "markdown_description":  "Phase 5C sweeps fixed two-source angular separation on the Group B hardware geometry using the same SS -\u003e LRMC front end as the current classical and SubspaceNet studies.",
+                   "markdown_output":  "phase5c_groupb_1p9_fixed_separation_sweep_results.md",
+                   "markdown_title":  "Phase 5C - Group B 1.9 Lambda Fixed-Separation Study",
+                   "write_summary_csv":  true,
+                   "markdown_group_label":  "coherent"
+               },
+    "commands":  {
+                     "TRAIN_MODEL":  false,
+                     "EVALUATE_MODE":  true,
+                     "CREATE_DATA":  true,
+                     "LOAD_DATA":  false
+                 },
+    "system_model":  {
+                         "signal_nature":  "coherent",
+                         "canonical_row_group":  2,
+                         "lrmc_postprocessing":  "none",
+                         "virtual_array_size":  9,
+                         "signal_type":  "NarrowBand",
+                         "covariance_mode":  "ss_then_lrmc",
+                         "geometry_name":  "mimo_2d_12ch_groupb_1p9",
+                         "N":  12,
+                         "bias":  0,
+                         "eta":  0,
+                         "lrmc_max_iter":  100,
+                         "lrmc_solver":  "svd",
+                         "sv_noise_var":  0,
+                         "elevation_min":  -15,
+                         "lrmc_epsilon":  1E-08,
+                         "lrmc_tol":  1E-06,
+                         "doa_min":  -15,
+                         "use_lrmc":  true,
+                         "min_doa_gap":  5,
+                         "T":  200,
+                         "sensor_positions":  [
+                                                  0,
+                                                  4,
+                                                  7,
+                                                  8
+                                              ],
+                         "M":  2,
+                         "lrmc_enforce_toeplitz":  false,
+                         "fixed_doa_gap":  5,
+                         "doa_resolution":  0.01,
+                         "array_spacing":  1.9,
+                         "elevation_max":  15,
+                         "physical_sensor_positions_2d":  [
+                                                              [
+                                                                  -15.2,
+                                                                  -3.8
+                                                              ],
+                                                              [
+                                                                  -7.6,
+                                                                  -3.8
+                                                              ],
+                                                              [
+                                                                  -1.9,
+                                                                  -3.8
+                                                              ],
+                                                              [
+                                                                  0,
+                                                                  -3.8
+                                                              ],
+                                                              [
+                                                                  -7.6,
+                                                                  -1.9
+                                                              ],
+                                                              [
+                                                                  0,
+                                                                  -1.9
+                                                              ],
+                                                              [
+                                                                  5.7,
+                                                                  -1.9
+                                                              ],
+                                                              [
+                                                                  7.6,
+                                                                  -1.9
+                                                              ],
+                                                              [
+                                                                  0,
+                                                                  0
+                                                              ],
+                                                              [
+                                                                  7.6,
+                                                                  0
+                                                              ],
+                                                              [
+                                                                  13.3,
+                                                                  0
+                                                              ],
+                                                              [
+                                                                  15.2,
+                                                                  0
+                                                              ]
+                                                          ],
+                         "lrmc_init_strategy":  "lag",
+                         "row_groups":  [
+                                            [
+                                                0,
+                                                1,
+                                                2,
+                                                3
+                                            ],
+                                            [
+                                                4,
+                                                5,
+                                                6,
+                                                7
+                                            ],
+                                            [
+                                                8,
+                                                9,
+                                                10,
+                                                11
+                                            ]
+                                        ],
+                         "doa_max":  15,
+                         "snr":  10,
+                         "lrmc_rank":  3
+                     },
+    "model":  {
+                  "tau":  3
+              },
+    "template_name":  "phase5c_groupb_1p9_coherent_ss_lrmc_gap5",
+    "experiment_type":  "subspace"
+}

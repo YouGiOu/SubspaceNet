@@ -51,7 +51,7 @@ def split_covariance_into_blocks(
     covariance: np.ndarray, row_groups: Sequence[Sequence[int]]
 ) -> List[np.ndarray]:
     """Extracts covariance blocks for the provided row groups."""
-    covariance = np.asarray(covariance, dtype=np.complex128)
+    covariance = ensure_hermitian(np.asarray(covariance, dtype=np.complex128))
     blocks = []
     for group in row_groups:
         indices = np.asarray(group, dtype=int)
@@ -120,6 +120,7 @@ def build_virtual_covariance_observation(
                 partial[row, col] = lag_values[lag]
                 mask[row, col] = 1.0
 
+    partial = ensure_hermitian(partial)
     if not np.allclose(partial, np.conjugate(partial.T), atol=1e-10):
         raise AssertionError(
             "build_virtual_covariance_observation: partial covariance must be Hermitian"
@@ -400,8 +401,9 @@ def complete_nula_covariance_from_covariance(
     nuclear_ridge: float = 1e-8,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, LRMCDiagnostics]:
     """Runs LRMC when a covariance matrix is already available."""
+    covariance = ensure_hermitian(np.asarray(covariance, dtype=np.complex128))
     partial, mask, lag_map = build_virtual_covariance_observation(
-        covariance=np.asarray(covariance, dtype=np.complex128),
+        covariance=covariance,
         sensor_positions=sensor_positions,
         virtual_size=virtual_size,
     )

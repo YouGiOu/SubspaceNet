@@ -1,183 +1,479 @@
 # Experimental Summary
 
-This document summarizes the current experimental results across the coherent and non-coherent NULA studies, the 1D spacing scan, the 2D row-replicated array studies, and the SubspaceNet baseline runs.
+This document is the current handoff summary for the SubspaceNet / LRMC / subspace-method experiment workflow in this repo.
 
-## 1. Main Takeaways
+It serves two purposes:
+- summarize the experimental conclusions reached so far
+- document the current experiment-writing style and code conventions so later AI agents can continue the work consistently
 
-- Array spacing has a strong effect on the classical subspace pipeline, but it is not the only factor.
-- For the 1D sparse NULA `[0, 1, 4, 8]`, `0.5 lambda` is the most favorable regime for LRMC and classical DOA estimation.
-- At `1.9 lambda`, MUSIC can still work very well for non-coherent signals under a narrow FOV, but Root-MUSIC and ESPRIT remain much more fragile.
-- The 2D row-replicated array is currently being used as a 2D snapshot generator and then reduced to a 1D surrogate for estimation. This structural mismatch is a major reason why the 2D results are not as strong as the 1D ones.
-- Fixing elevation in the 2D experiments does not materially improve the results, so elevation is not the main culprit.
-- Root-MUSIC and ESPRIT in the current implementation are highly sensitive to the array model and should be interpreted cautiously on non-ULA or reduced-geometry cases.
+If you are reading this as a new agent, treat this file as the current project state before adding new experiments or changing code.
 
-## 2. Phase 1: Coherent 1D NULA LRMC Studies
+## 1. Current Big Picture
 
-The coherent sparse NULA experiments established the basic behavior of LRMC on the `[0, 1, 4, 8]` geometry.
+The project has evolved from simple 1D sparse-NULA LRMC checks into a structured workflow covering:
+- 1D coherent and non-coherent NULA controls
+- 2D row-replicated hardware-style geometries
+- geometry-shape ablations for Groups A, B, and C
+- coherent and non-coherent classical baselines
+- large-sample SubspaceNet training on the actual Group B `1.9 lambda` hardware geometry
+- low-snapshot and ultra-low-snapshot classical boundary studies
 
-### Key outcomes
+The current best-supported conclusions are:
+- spacing matters, but it is not the only factor
+- source coherence matters a lot
+- geometry modeling accuracy matters a lot, especially for LRMC
+- Group B `1.9 lambda` is viable once the row geometry is modeled correctly
+- the classical `SS -> LRMC` front end is the main canonical preprocessing path for Group B studies
+- SubspaceNet-ESPRIT is currently the most promising learned head
+- differentiable Root-MUSIC remains fragile
 
-- LRMC helped significantly compared with the raw baseline.
-- Toeplitz enforcement and solver changes provided smaller but still meaningful effects.
-- The coherent 1D setting is the first regime where LRMC clearly adds value over the direct baseline.
+## 2. Core Experimental Workflow
 
-### Representative result
+### 2.1 Default pattern for new experiments
 
-From the coherent LRMC results:
-- Baseline MUSIC was around the mid-20 degree range.
-- LRMC reduced MUSIC / Root-MUSIC / ESPRIT to roughly the 10 degree range in the best coherent 1D setups.
+When adding a new experiment family, the current repo workflow is:
 
-## 3. Phase 3: 1D Spacing Scan
+1. create a dedicated launcher at repo root
+2. create a dedicated template directory under:
+   - `data/dataset_templates/ablation/...`
+3. create exactly one experiment-plan document under:
+   - `results/<experiment_family>/..._experiment_plan.md`
+4. run through `run_ablation.py`
+5. let `run_ablation.py` generate:
+   - `summary.csv`
+   - the family markdown results file
+   - per-method `metrics.json`
 
-The spacing scan showed that spacing matters a lot for coherent sparse NULA processing.
+Important user preference:
+- for pure experiment sweeps, add only an experiment plan
+- do not add an implementation-plan document unless a new algorithm or new processing code is being introduced
 
-### Observed trend
+### 2.2 Naming conventions
 
-- `0.5 lambda`: LRMC is very effective.
-- `1.0 lambda`: LRMC still helps, but the gain is much smaller.
-- `1.9 lambda`: LRMC benefit is largely lost for the coherent 1D case.
+Current naming style is:
+- launchers:
+  - `run_phaseX_...py`
+- template names:
+  - embedded directly in JSON as `template_name`
+- results folders:
+  - `results/<family_name>/...`
+- results markdown:
+  - usually `<family_name>_results.md`
+- plan docs:
+  - usually `<family_name>_experiment_plan.md`
 
-### Representative RMSE values
+When coherent / non-coherent are both present, include that in names explicitly.
+
+### 2.3 Template style
+
+The current template schema uses:
+- `experiment_type`
+- `methods`
+- `commands`
+- `system_model`
+- `model`
+- `dataset`
+- `report`
+- `description`
+- `template_name`
+
+For classical experiments, the most important fields are:
+- `system_model.signal_nature`
+- `system_model.T`
+- `system_model.array_spacing`
+- `system_model.geometry_name`
+- `system_model.sensor_positions`
+- `system_model.row_groups`
+- `system_model.canonical_row_group`
+- `system_model.virtual_array_size`
+- `system_model.covariance_mode`
+- `system_model.use_lrmc`
+- `system_model.lrmc_*`
+- `system_model.doa_min`, `doa_max`
+- `system_model.elevation_min`, `elevation_max`
+- `system_model.min_doa_gap`
+
+Newer dataset-generation control:
+- `system_model.fixed_doa_gap`
+  - if present, dataset generation uses an exact azimuth separation instead of only enforcing a minimum separation
+
+### 2.4 Current canonical classical front end
+
+For Group B hardware studies, the default classical front end is:
+- `covariance_mode = "ss_then_lrmc"`
+- meaning:
+  - row-wise spatial smoothing first
+  - then LRMC onto the virtual ULA
+
+This is the path used for:
+- most recent Group B classical baselines
+- low-snapshot boundary studies
+- the current SubspaceNet Group B training templates
+
+## 3. Geometry Conventions
+
+### 3.1 Group definitions
+
+The project now uses these 2D geometry labels:
+
+- Group A:
+  - rectangular row-stacked geometry
+  - row pattern `[0, 1, 4, 8]`
+- Group B:
+  - slanted / hardware geometry
+  - row pattern `[0, 4, 7, 8]`
+- Group C:
+  - rectangular control geometry
+  - row pattern `[0, 4, 7, 8]`
+
+### 3.2 Very important implementation note
+
+The Group B LRMC path was previously wrong because rowwise LRMC was effectively still using the old `[0, 1, 4, 8]` row model.
+
+This has been fixed.
+
+Current rule:
+- for 2D row-replicated arrays, row geometry must be derived from the actual physical x-coordinates
+- do not assume the nominal template row pattern unless it really matches the physical row
+
+This fix lives in:
+- [src/methods.py](/f:/workspace1/SubspaceNet/src/methods.py)
+
+### 3.3 Current 2D limitation
+
+The current 2D classical pipeline is still not a true 2D DOA estimator.
+
+It works like this:
+- 2D snapshots are generated using the physical 2D geometry
+- then the data are reduced into a row-based 1D surrogate
+- classical methods run on the reduced row model or LRMC-completed virtual ULA
+
+So the current 2D studies should be interpreted as:
+- 2D data generation
+- 1D surrogate estimation
+
+This is a known structural limitation.
+
+## 4. Phase 3: 1D Spacing Scan
+
+Reference file:
+- [phase3_1d_spacing_scan_results.md](/f:/workspace1/SubspaceNet/results/phase3_1d_spacing_scan/phase3_1d_spacing_scan_results.md)
+
+This is still one of the key control experiments.
+
+### Result
 
 | Spacing | MUSIC baseline | MUSIC + LRMC | Root-MUSIC baseline | Root-MUSIC + LRMC | ESPRIT baseline | ESPRIT + LRMC |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
 | 0.5 lambda | 26.59 | 10.55 | 32.08 | 9.62 | 31.60 | 9.73 |
 | 1.0 lambda | 30.38 | 31.08 | 29.06 | 23.83 | 29.08 | 24.01 |
-| 1.9 lambda | 38.50 | 38.90 | 32.26 | 28.58 | 32.36 | 28.49 |
+| 1.9 lambda | 38.52 | 38.91 | 32.26 | 28.58 | 32.36 | 28.49 |
 
 ### Interpretation
 
-- The array manifold becomes increasingly difficult as spacing grows.
-- LRMC cannot fully recover performance once the geometry becomes too ambiguous.
-- This was the first strong evidence that the array geometry, not only the solver, controls the final RMSE.
+- `0.5 lambda` is the most favorable coherent 1D sparse-NULA regime for LRMC
+- `1.0 lambda` already weakens LRMC significantly
+- in the coherent 1D setup, `1.9 lambda` largely destroys the benefit of LRMC
 
-## 4. Phase 2: 2D Row-Replicated Array, Coherent Signals
+This experiment was important because it initially suggested spacing was the dominant problem.
 
-The 2D study uses the row-replicated 12-channel geometry with three translated `[0, 1, 4, 8]` rows.
+Later experiments showed the full story is more nuanced:
+- spacing matters
+- coherence matters
+- geometry/topology matters
+- estimator choice matters
 
-### Important implementation note
+## 5. Group B 1.9 Lambda Classical Conclusions
 
-The current 2D classical pipeline is still effectively 1D at estimation time:
-- baseline uses the canonical row only
-- LRMC completes a virtual ULA from the row-reduced covariance
-- `SS -> LRMC` and `LRMC -> SS` still end up as 1D surrogate estimators
+After the geometry fixes and the coherent/non-coherent 2D studies, the project has converged on these practical interpretations for Group B:
 
-So the 2D data generation is genuine, but the estimation step is not a true 2D DOA solver.
+### Coherent Group B `1.9 lambda`
 
-### Original 2D coherent 1.9 lambda result
+- classical Group B is workable
+- `SS -> LRMC` is the main baseline path
+- coherent errors are typically around the low-single-degree range in the better classical runs
+- this regime is hard enough that learned methods can still matter
 
-The original 2D coherent 1.9 lambda study produced RMSEs around:
-- MUSIC: `7.97 deg`
-- Root-MUSIC: `6.84 deg`
-- ESPRIT: `7.01 deg`
+### Non-coherent Group B `1.9 lambda`
 
-The preprocessing variants were all in a similar range, with spatial smoothing only being the best of the tested options for ESPRIT.
+- classical Group B becomes much easier
+- MUSIC becomes almost trivial in many settings
+- Root-MUSIC / ESPRIT become very strong after LRMC-based preprocessing
+- this regime is easier than the coherent one, but still useful for testing whether learned heads stabilize
 
-### Fixed-elevation 2D coherent 1.9 lambda result
+## 6. Phase 4A: Large-Sample Coherent SubspaceNet on Group B 1.9 Lambda
 
-When elevation was fixed to a single angle, the results changed only slightly:
-- MUSIC: `7.85 deg`
-- Root-MUSIC: `6.87 deg`
-- ESPRIT: `6.99 deg`
+Reference file:
+- [phase4_subspacenet_groupb_1p9_coherent_large_results.md](/f:/workspace1/SubspaceNet/results/phase4_subspacenet_groupb_1p9_coherent_large/phase4_subspacenet_groupb_1p9_coherent_large_results.md)
 
-This shows that elevation variation is not the main reason the 2D results are weaker.
+### Result
 
-### Interpretation
-
-- The 2D pipeline is limited mainly by the 2D-to-1D reduction and the fact that the estimators are still fundamentally 1D methods.
-- Elevation is a secondary factor, not the dominant one.
-
-## 5. Phase 2: 2D Row-Replicated Array, 0.5 lambda
-
-The 0.5 lambda 2D study was much healthier than the 1.9 lambda version.
-
-### Coherent signals
-
-Best results from the coherent 0.5 lambda 2D study:
-- MUSIC: spatial smoothing only, `0.8326 deg`
-- Root-MUSIC: `SS -> LRMC`, `2.1714 deg`
-- ESPRIT: `SS -> LRMC`, `1.3120 deg`
-
-### Non-coherent signals
-
-Best results from the non-coherent 0.5 lambda 2D study:
-- MUSIC: baseline / spatial smoothing only, around `0.116 deg`
-- Root-MUSIC: `SS -> LRMC`, `0.1624 deg`
-- ESPRIT: `SS -> LRMC`, `0.1512 deg`
+- SubspaceNet-ESPRIT: about `0.96 deg`
+- SubspaceNet-Root-MUSIC: about `5.67 deg`
 
 ### Interpretation
 
-- `0.5 lambda` restores a much cleaner manifold.
-- For coherent data, smoothing-first preprocessing is the best choice.
-- For non-coherent data, MUSIC is already very strong without LRMC, while Root-MUSIC and ESPRIT still benefit from LRMC.
-- `SS -> LRMC` is generally the most reliable order for the shift-invariant methods.
+- ESPRIT training succeeded and clearly beat the comparable classical coherent Group B baseline
+- Root-MUSIC training was unstable and under-performed badly
+- the Root-MUSIC loss curve oscillated heavily
+- the ESPRIT loss curve was smooth and healthy
 
-## 6. Phase 3b / 3c: 1D NULA at 1.9 lambda, Coherent vs Non-Coherent
+Current working interpretation:
+- SubspaceNet-ESPRIT is the main viable learned path
+- differentiable Root-MUSIC is still structurally fragile in this repo
 
-These experiments were used to isolate the effect of coherence and to verify the spacing-aware Root-MUSIC / ESPRIT fix.
+## 7. Phase 4B: Large-Sample Non-Coherent SubspaceNet on Group B 1.9 Lambda
 
-### Non-coherent 1.9 lambda NULA
+Reference files:
+- [phase4_subspacenet_groupb_1p9_noncoherent_large_experiment_plan.md](/f:/workspace1/SubspaceNet/results/phase4_subspacenet_groupb_1p9_noncoherent_large/phase4_subspacenet_groupb_1p9_noncoherent_large_experiment_plan.md)
+- [esprit metrics.json](/f:/workspace1/SubspaceNet/results/phase4_subspacenet_groupb_1p9_noncoherent_large/phase4b_groupb_1p9_noncoherent_subspacenet_45k/esprit/metrics.json)
 
-The non-coherent 1.9 lambda NULA results were excellent for MUSIC and very strong after LRMC for all classical methods:
-- MUSIC baseline: `0.0177 deg`
-- MUSIC + LRMC: `0.1748 deg`
-- Root-MUSIC + LRMC: `0.1850 deg`
-- ESPRIT + LRMC: `0.1790 deg`
-- LRMC -> SS slightly improved the shift-invariant methods further to around `0.145 deg`
+### Status
 
-### Coherent 1.9 lambda NULA
+This run was started, but Root-MUSIC did not converge well and was stopped early by the user.
 
-The coherent 1.9 lambda NULA case was much harder:
-- MUSIC baseline: `5.3576 deg`
-- MUSIC + LRMC: `2.8432 deg`
-- Root-MUSIC baseline: `6.3504 deg`
-- Root-MUSIC + LRMC: `2.7867 deg`
-- ESPRIT baseline: `6.3382 deg`
-- ESPRIT + LRMC: `2.9282 deg`
+As a result:
+- no family-level `results.md` was generated
+- no family-level `summary.csv` was generated
+- the ESPRIT branch completed and produced metrics
+- the Root-MUSIC branch should currently be treated as incomplete / aborted
 
-### Interpretation
+### Available result
 
-- 1.9 lambda is not inherently fatal for MUSIC under a narrow FOV when signals are non-coherent.
-- Coherence is a major source of difficulty.
-- Root-MUSIC and ESPRIT are much more fragile than MUSIC.
-- The spacing-aware inversion fix was necessary to make the Root-MUSIC / ESPRIT results meaningful.
-
-## 7. SubspaceNet Baselines
-
-The previously trained SubspaceNet models on non-coherent NULA + LRMC reached roughly:
-- Root-MUSIC: `2.86 deg`
-- ESPRIT: `2.13 deg`
-
-These results are much weaker than the best classical pipelines in the newer 1D / 2D non-coherent experiments.
+From the completed ESPRIT branch:
+- SubspaceNet-ESPRIT RMSE: about `0.2604 deg`
 
 ### Interpretation
 
-- The training set size used in the repo is much smaller than the `J = 45,000` sample regime mentioned in the paper.
-- The learned model likely needs more data, a better-matched preprocessing front end, or a harder target regime to become competitive.
+- non-coherent large-sample SubspaceNet-ESPRIT is very strong
+- it is markedly better than the coherent learned ESPRIT result
+- the non-coherent regime is substantially easier for the learned model as well as for the classical pipeline
+- Root-MUSIC still appears unreliable enough that it should not currently be treated as a stable learned head
 
-## 8. Overall Conclusions
+## 8. Phase 5: Group B 1.9 Lambda Snapshot Boundary
 
-1. `0.5 lambda` is the most favorable spacing for the current sparse-NULA LRMC pipeline.
-2. `1.9 lambda` is not universally bad, but it is much more sensitive to signal coherence and estimator choice.
-3. MUSIC is the most robust classical method in the narrow-FOV experiments.
-4. Root-MUSIC and ESPRIT are highly geometry-sensitive in this code base and should be used with spacing-aware caution.
-5. The current 2D pipeline is still structurally limited because it reduces 2D measurements to a 1D surrogate before estimation.
-6. Fixing elevation does not materially improve the 2D coherent results, so elevation is not the main issue.
-7. If SubspaceNet is to be trained next, the best candidate inputs are likely the strongest classical preprocessing outputs, not the raw 2D snapshots.
+Reference file:
+- [phase5_groupb_1p9_snapshot_boundary_results.md](/f:/workspace1/SubspaceNet/results/phase5_groupb_1p9_snapshot_boundary/phase5_groupb_1p9_snapshot_boundary_results.md)
 
-## 9. Recommended Next Steps
+This sweep covered:
+- coherent and non-coherent
+- `T = 10, 25, 50, 100, 200`
+- Group B `1.9 lambda`
+- `SS -> LRMC`
 
-- If the goal is classical performance:
-  - keep `0.5 lambda` as the preferred regime
-  - use `SS -> LRMC` for Root-MUSIC / ESPRIT
-  - use spatial smoothing only or baseline MUSIC when it already performs best
+### Main conclusion
 
-- If the goal is to improve SubspaceNet:
-  - increase the training set size substantially
-  - compare against the best classical preprocessing output
-  - decide whether the target is coherent, non-coherent, 1D, or 2D before training
+In that range, there was no strong low-snapshot collapse:
+- coherent performance was surprisingly flat
+- non-coherent performance degraded smoothly but remained strong
 
-- If the goal is to understand the 2D array better:
-  - move toward a true 2D DOA estimator
-  - or run a controlled 2D diagnostic with fixed elevation and a true 2D-aware method
+This motivated a deeper ultra-low-snapshot follow-up.
 
+## 9. Phase 5B: Ultra-Low Snapshot Boundary
+
+Reference file:
+- [phase5b_groupb_1p9_ultralow_snapshot_boundary_results.md](/f:/workspace1/SubspaceNet/results/phase5b_groupb_1p9_ultralow_snapshot_boundary/phase5b_groupb_1p9_ultralow_snapshot_boundary_results.md)
+
+This sweep covered:
+- coherent and non-coherent
+- `T = 1, 2, 4, 6, 8, 10`
+- Group B `1.9 lambda`
+- `SS -> LRMC`
+
+### Coherent trend
+
+Coherent performance remains surprisingly stable even down to `T = 1`:
+- roughly `1.7 deg` to `2.0 deg` across methods over the full `T = 1..10` range
+
+Representative values:
+- `T = 1`: about `1.91 - 1.96 deg`
+- `T = 10`: about `1.73 - 1.82 deg`
+
+### Non-coherent trend
+
+Non-coherent performance now shows the expected low-snapshot breakdown:
+- `T = 10`: about `0.76 - 0.88 deg`
+- `T = 8`: about `0.76 - 0.82 deg`
+- `T = 6`: about `1.01 - 1.13 deg`
+- `T = 4`: about `1.23 - 1.27 deg`
+- `T = 2`: about `1.88 - 1.94 deg`
+- `T = 1`: about `3.32 - 3.37 deg`
+
+### Interpretation
+
+This was an important correction to the earlier intuition:
+- coherent Group B is not primarily snapshot-limited in this ultra-low range
+- non-coherent Group B does have a real ultra-low-snapshot boundary
+- if future low-snapshot SubspaceNet training is pursued, the low-`T` non-coherent regime is now a meaningful target too
+
+### Important implementation fix discovered here
+
+The ultra-low-snapshot experiments initially failed because:
+- `np.cov(X)` was still being used in classical covariance construction
+- this is not appropriate at `T = 1`
+
+This was fixed by switching those paths to the repo's own:
+- `(1/T) X X^H` sample covariance implementation
+
+And LRMC covariance inputs are now Hermitian-projected more defensively.
+
+Relevant files:
+- [src/methods.py](/f:/workspace1/SubspaceNet/src/methods.py)
+- [src/lrmc.py](/f:/workspace1/SubspaceNet/src/lrmc.py)
+
+## 10. Phase 5C: Fixed Angular-Separation Sweep
+
+Reference files:
+- [run_phase5c_groupb_1p9_fixed_separation_sweep.py](/f:/workspace1/SubspaceNet/run_phase5c_groupb_1p9_fixed_separation_sweep.py)
+- [phase5c_groupb_1p9_fixed_separation_sweep_experiment_plan.md](/f:/workspace1/SubspaceNet/results/phase5c_groupb_1p9_fixed_separation_sweep/phase5c_groupb_1p9_fixed_separation_sweep_experiment_plan.md)
+- [phase5c_groupb_1p9_fixed_separation_sweep_results.md](/f:/workspace1/SubspaceNet/results/phase5c_groupb_1p9_fixed_separation_sweep/phase5c_groupb_1p9_fixed_separation_sweep_results.md)
+
+This sweep covered:
+- coherent and non-coherent
+- fixed azimuth separations `5, 4, 3, 2, 1 deg`
+- Group B `1.9 lambda`
+- `SS -> LRMC`
+- `T = 200`
+
+### Coherent trend
+
+The coherent Group B pipeline is highly sensitive to angular separation, and this axis is much more revealing than the earlier snapshot sweeps.
+
+Representative values:
+- `5 deg`: about `1.03 - 1.16 deg`
+- `4 deg`: about `0.10 - 0.14 deg`
+- `3 deg`: about `1.38 - 1.59 deg`
+- `2 deg`: about `3.75 - 4.30 deg`
+- `1 deg`: about `5.22 - 6.39 deg`
+
+Interpretation:
+- coherent Group B remains strong down to around `3 - 5 deg`
+- performance begins to degrade sharply at `2 deg`
+- `1 deg` is a clear classical failure regime for coherent signals
+
+The `4 deg` point is unusually strong relative to `5 deg` and `3 deg`, so it should be treated as a good empirical result rather than a strict monotonic law. The broader pattern is still clear: coherent performance breaks down rapidly below about `3 deg`.
+
+### Non-coherent trend
+
+The non-coherent Group B pipeline is extremely robust to angular separation in this tested range.
+
+Representative values:
+- `5 deg`: about `0.092 - 0.094 deg`
+- `4 deg`: about `0.093 - 0.095 deg`
+- `3 deg`: about `0.095 - 0.098 deg`
+- `2 deg`: about `0.098 - 0.116 deg`
+- `1 deg`: about `0.101 - 0.108 deg` for ESPRIT / Root-MUSIC, `0.329 deg` for MUSIC
+
+Interpretation:
+- non-coherent Root-MUSIC and ESPRIT remain essentially stable even down to `1 deg`
+- non-coherent MUSIC degrades somewhat at `1 deg`, but still stays much better than the coherent case
+- for Group B, angular separation is mainly a coherent-signal bottleneck, not a non-coherent one
+
+### Boundary conclusion
+
+Phase 5C provides one of the clearest current training-boundary signals in the repo:
+- low snapshot count was not the main coherent failure axis
+- small angular separation is a much stronger coherent failure axis
+
+So if future SubspaceNet training is meant to target a classical weakness, the most meaningful next regimes are:
+- coherent Group B with very small separation, especially `1 - 2 deg`
+- or combined hard regimes such as small separation plus low snapshots
+
+Important new template option added for this:
+- `fixed_doa_gap`
+
+This allows dataset generation to enforce exact azimuth separations like:
+- `5 deg`, `4 deg`, `3 deg`, `2 deg`, `1 deg`
+
+instead of only enforcing a minimum gap.
+
+Relevant files:
+- [src/system_model.py](/f:/workspace1/SubspaceNet/src/system_model.py)
+- [src/data_handler.py](/f:/workspace1/SubspaceNet/src/data_handler.py)
+- [src/signal_creation.py](/f:/workspace1/SubspaceNet/src/signal_creation.py)
+
+## 11. Current Training Workflow for SubspaceNet
+
+### Current preferred learned target
+
+At the moment, the main practical learned target is:
+- Group B
+- `1.9 lambda`
+- SubspaceNet-ESPRIT
+
+### Current paper-scale training configuration
+
+The large-sample runs use:
+- `45,000` samples
+- cached dataset reuse
+- accelerated batching / DataLoader settings
+
+### Current training optimizations already implemented
+
+The repo already includes:
+- configurable validation batch size
+- configurable DataLoader workers
+- `pin_memory`
+- `persistent_workers`
+- non-blocking GPU transfers
+- `optimizer.zero_grad(set_to_none=True)`
+- dataset cache reuse in `run_ablation.py`
+
+### Current warning
+
+Differentiable Root-MUSIC is still unstable enough that:
+- it should be treated as experimental
+- ESPRIT should be the default learned head unless there is a specific reason to investigate Root-MUSIC further
+
+## 12. Current Coding / Experiment Style Rules For Future AI Agents
+
+If you are another AI continuing this repo, follow these rules.
+
+### 12.1 For experiment additions
+
+- add:
+  - a launcher
+  - templates
+  - one experiment plan doc
+- do not add an implementation-plan doc unless actual algorithm code changes are required
+
+### 12.2 For geometry-sensitive work
+
+- do not assume row geometry from old templates
+- derive row geometry from physical 2D coordinates when working in the 2D rowwise LRMC path
+- be careful with Group B vs Group A/C row patterns
+
+### 12.3 For ultra-low-snapshot work
+
+- avoid `np.cov` in fragile classical covariance paths
+- prefer the explicit sample covariance helper
+- keep Hermitian stabilization in mind before LRMC
+
+### 12.4 For documentation style
+
+Current repo style prefers:
+- dedicated per-family results markdown
+- direct file naming that includes:
+  - phase number
+  - geometry or regime
+  - coherent / noncoherent when relevant
+- explicit `markdown_group_label` and `markdown_scheme_label` in templates for readable result tables
+
+### 12.5 For SubspaceNet work
+
+- keep dataset caching enabled for large runs
+- prefer ESPRIT-first unless Root-MUSIC is the explicit research target
+- if Root-MUSIC is retried, inspect the differentiable Root-MUSIC head carefully before spending long training time
+
+## 13. Current Practical Conclusions
+
+1. The project's most validated hardware-relevant regime is now Group B `1.9 lambda`.
+2. Classical Group B performance is strong once row geometry is modeled correctly.
+3. Coherent Group B remains a meaningful learned target.
+4. Non-coherent Group B is easier, but still valuable for testing learned stability and low-snapshot boundaries.
+5. SubspaceNet-ESPRIT is currently the strongest learned path.
+6. Root-MUSIC remains the most fragile component in both classical and learned forms.
+7. The experiment framework is now mature enough that future work should be targeted:
+   - low-separation, especially coherent `1 - 2 deg`
+   - low-snapshot
+   - or direct SubspaceNet improvements

@@ -1,0 +1,150 @@
+{
+  "experiment_type": "subspace",
+  "methods": [
+    "music",
+    "esprit",
+    "r-music"
+  ],
+  "seed": 42,
+  "commands": {
+    "CREATE_DATA": true,
+    "LOAD_DATA": false,
+    "TRAIN_MODEL": false,
+    "EVALUATE_MODE": true
+  },
+  "system_model": {
+    "N": 12,
+    "M": 2,
+    "T": 10,
+    "snr": 10,
+    "signal_type": "NarrowBand",
+    "signal_nature": "coherent",
+    "eta": 0,
+    "bias": 0,
+    "sv_noise_var": 0,
+    "array_spacing": 1.9,
+    "geometry_name": "mimo_2d_12ch_groupb_1p9",
+    "doa_min": -15.0,
+    "doa_max": 15.0,
+    "elevation_min": -15.0,
+    "elevation_max": 15.0,
+    "doa_resolution": 0.01,
+    "min_doa_gap": 5.0,
+    "sensor_positions": [
+      0,
+      4,
+      7,
+      8
+    ],
+    "physical_sensor_positions_2d": [
+      [
+        -15.2,
+        -3.8
+      ],
+      [
+        -7.6,
+        -3.8
+      ],
+      [
+        -1.9,
+        -3.8
+      ],
+      [
+        0.0,
+        -3.8
+      ],
+      [
+        -7.6,
+        -1.9
+      ],
+      [
+        0.0,
+        -1.9
+      ],
+      [
+        5.7,
+        -1.9
+      ],
+      [
+        7.6,
+        -1.9
+      ],
+      [
+        0.0,
+        0.0
+      ],
+      [
+        7.6,
+        0.0
+      ],
+      [
+        13.3,
+        0.0
+      ],
+      [
+        15.2,
+        0.0
+      ]
+    ],
+    "row_groups": [
+      [
+        0,
+        1,
+        2,
+        3
+      ],
+      [
+        4,
+        5,
+        6,
+        7
+      ],
+      [
+        8,
+        9,
+        10,
+        11
+      ]
+    ],
+    "canonical_row_group": 2,
+    "virtual_array_size": 9,
+    "covariance_mode": "ss_then_lrmc",
+    "use_lrmc": true,
+    "lrmc_rank": 3,
+    "lrmc_solver": "svd",
+    "lrmc_init_strategy": "lag",
+    "lrmc_postprocessing": "none",
+    "lrmc_enforce_toeplitz": false,
+    "lrmc_max_iter": 100,
+    "lrmc_tol": 1e-06,
+    "lrmc_epsilon": 1e-08
+  },
+  "model": {
+    "tau": 3
+  },
+  "dataset": {
+    "samples_size": 4096,
+    "train_test_ratio": 0.2
+  },
+  "report": {
+    "markdown_output": "phase5_groupb_1p9_snapshot_boundary_results.md",
+    "markdown_title": "Phase 5 - Group B 1.9 Lambda Snapshot Boundary Study",
+    "markdown_description": "Phase 5 sweeps snapshot count on the Group B hardware geometry using the same SS -> LRMC front end as the SubspaceNet studies, to identify the low-snapshot boundary for coherent and non-coherent signals.",
+    "markdown_conditions": [
+      "Array: Group B 12-channel 2D hardware geometry",
+      "Physical spacing: 1.9 lambda",
+      "Preprocessing: spatial smoothing before LRMC",
+      "Azimuth and elevation range: [-15 deg, 15 deg]",
+      "Minimum azimuth separation: 5 deg",
+      "Sources: 2 narrowband targets",
+      "Snapshot sweep: T = 10, 25, 50, 100, 200",
+      "Methods: MUSIC, Root-MUSIC, ESPRIT",
+      "Metric: horizontal-angle RMSE in degrees"
+    ],
+    "write_summary_csv": true,
+    "markdown_scheme_label": "T = 10 | SS -> LRMC",
+    "markdown_group_label": "coherent"
+  },
+  "description": "Phase 5 Group B 1.9 lambda coherent snapshot boundary at T=10 with SS -> LRMC.",
+  "template_name": "phase5_groupb_1p9_coherent_ss_lrmc_t10"
+}

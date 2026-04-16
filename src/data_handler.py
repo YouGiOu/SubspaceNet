@@ -66,8 +66,28 @@ def _sample_constrained_angles(
     upper: float,
     resolution: float,
     min_gap: float,
+    fixed_gap: float = None,
 ):
+    if count <= 0:
+        return np.array([], dtype=float)
     decimals = max(0, int(np.ceil(-np.log10(resolution)))) if resolution < 1 else 0
+    if fixed_gap is not None:
+        fixed_gap = float(fixed_gap)
+        if fixed_gap < 0:
+            raise ValueError("_sample_constrained_angles: fixed_gap must be non-negative")
+        span = (count - 1) * fixed_gap
+        if upper - lower < span:
+            raise ValueError(
+                "_sample_constrained_angles: requested fixed gap does not fit inside the angular range"
+            )
+        start_candidates = np.arange(lower, upper - span + resolution * 0.5, resolution)
+        if start_candidates.size == 0:
+            raise ValueError(
+                "_sample_constrained_angles: no valid start positions for requested fixed gap"
+            )
+        start = float(np.random.choice(start_candidates))
+        values = start + fixed_gap * np.arange(count, dtype=float)
+        return np.round(values, decimals=decimals)
     while True:
         values = np.round(np.random.uniform(low=lower, high=upper, size=count), decimals=decimals)
         values.sort()
@@ -85,12 +105,16 @@ def _sample_2d_doa_pairs(system_model_params: SystemModelParams):
     elevation_upper = float(getattr(system_model_params, "elevation_max", upper))
     resolution = float(getattr(system_model_params, "doa_resolution", 0.01))
     min_gap = float(getattr(system_model_params, "min_doa_gap", 5.0))
+    fixed_gap = getattr(system_model_params, "fixed_doa_gap", None)
+    if fixed_gap is not None:
+        fixed_gap = float(fixed_gap)
     azimuths = _sample_constrained_angles(
         count=int(system_model_params.M),
         lower=lower,
         upper=upper,
         resolution=resolution,
         min_gap=min_gap,
+        fixed_gap=fixed_gap,
     )
     elevations = np.round(
         np.random.uniform(low=elevation_lower, high=elevation_upper, size=int(system_model_params.M)),
@@ -262,7 +286,18 @@ def create_dataset(
                     doa_pairs = true_doa
                 samples_model.set_doa_2d(doa_pairs)
             else:
-                samples_model.set_doa(true_doa)
+                if true_doa is None:
+                    doa_values = _sample_constrained_angles(
+                        count=int(system_model_params.M),
+                        lower=float(getattr(system_model_params, "doa_min", -90.0)),
+                        upper=float(getattr(system_model_params, "doa_max", 90.0)),
+                        resolution=float(getattr(system_model_params, "doa_resolution", 0.01)),
+                        min_gap=float(getattr(system_model_params, "min_doa_gap", 15.0)),
+                        fixed_gap=getattr(system_model_params, "fixed_doa_gap", None),
+                    )
+                    samples_model.set_doa(doa_values)
+                else:
+                    samples_model.set_doa(true_doa)
             # Observations matrix creation
             X = torch.tensor(
                 samples_model.samples_creation(
@@ -590,10 +625,13 @@ def get_experiment_suffix(system_model_params: SystemModelParams):
     doa_min = getattr(system_model_params, "doa_min", None)
     doa_max = getattr(system_model_params, "doa_max", None)
     min_doa_gap = getattr(system_model_params, "min_doa_gap", None)
+    fixed_doa_gap = getattr(system_model_params, "fixed_doa_gap", None)
     if doa_min is not None and doa_max is not None:
         suffix += f"fov={doa_min}to{doa_max}_"
     if min_doa_gap is not None:
         suffix += f"gap={min_doa_gap}_"
+    if fixed_doa_gap is not None:
+        suffix += f"fixedgap={fixed_doa_gap}_"
     if getattr(system_model_params, "use_lrmc", False):
         rank = getattr(system_model_params, "lrmc_rank", None)
         if rank is None:

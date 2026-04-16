@@ -62,6 +62,7 @@ class SystemModelParams:
     elevation_max = None  # Optional elevation sampling upper bound in degrees
     doa_resolution = 0.01  # Sampling resolution in degrees for random DOA generation
     min_doa_gap = 15.0  # Minimal gap between sampled DOAs in degrees
+    fixed_doa_gap = None  # Optional exact angular separation to enforce in dataset generation
     sensor_positions: Optional[Sequence[float]] = None  # Explicit array geometry
     virtual_array_size: Optional[int] = None  # Virtual ULA aperture size
     lrmc_rank = None  # Optional rank for LRMC experiments

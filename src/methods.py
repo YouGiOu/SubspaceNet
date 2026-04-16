@@ -58,6 +58,7 @@ from src.lrmc import (
     complete_nula_covariance,
     complete_nula_covariance_from_covariance,
     complete_rowwise_nula_covariance,
+    compute_sample_covariance,
     split_covariance_into_blocks,
 )
 from src.models import SubspaceNet
@@ -287,7 +288,7 @@ class SubspaceMethod(object):
             """
             row_groups = self._get_row_groups()
             if row_groups:
-                covariance = np.cov(X)
+                covariance = compute_sample_covariance(X)
                 blocks = split_covariance_into_blocks(covariance, row_groups)
                 return average_covariance_blocks(blocks)
             # Define the sub-arrays size
@@ -302,7 +303,7 @@ class SubspaceMethod(object):
                 # Run over all sub-arrays
                 x_sub = X[j : j + sub_array_size, :]
                 # Calculate sample covariance matrix for each sub-array
-                sub_covariance = np.cov(x_sub)
+                sub_covariance = compute_sample_covariance(x_sub)
                 # Aggregate sub-arrays covariances
                 covariance_mat += sub_covariance
             # Divide overall matrix by the number of sources
@@ -345,7 +346,7 @@ class SubspaceMethod(object):
             """Calculates covariance via LRMC-completed virtual ULA covariance."""
             row_groups = self._get_row_groups()
             if row_groups and mode in {"lrmc_only", "lrmc", "lrmc_then_ss"}:
-                covariance = np.cov(X)
+                covariance = compute_sample_covariance(X)
                 variant = "canonical" if mode in {"lrmc_only", "lrmc"} else "average_completed"
                 _, _, _, completed_covariance, diagnostics = complete_rowwise_nula_covariance(
                     covariance=covariance,
@@ -385,7 +386,7 @@ class SubspaceMethod(object):
             return self.apply_postprocessing(completed_covariance)
 
         def rowwise_lrmc_then_smoothing(X: np.ndarray):
-            covariance = np.cov(X)
+            covariance = compute_sample_covariance(X)
             _, _, _, completed_covariance, diagnostics = complete_rowwise_nula_covariance(
                 covariance=covariance,
                 row_groups=self._get_row_groups(),
@@ -407,7 +408,7 @@ class SubspaceMethod(object):
             return self.apply_postprocessing(completed_covariance)
 
         def rowwise_smoothing_then_lrmc(X: np.ndarray):
-            covariance = np.cov(X)
+            covariance = compute_sample_covariance(X)
             _, _, _, completed_covariance, diagnostics = complete_rowwise_nula_covariance(
                 covariance=covariance,
                 row_groups=self._get_row_groups(),
@@ -441,7 +442,7 @@ class SubspaceMethod(object):
         elif mode.startswith("lrmc"):
             return lrmc_covariance(X)
         elif mode.startswith("sample"):
-            covariance = np.cov(X)
+            covariance = compute_sample_covariance(X)
             row_groups = self._get_row_groups()
             if row_groups:
                 canonical_group = getattr(

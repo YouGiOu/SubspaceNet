@@ -59,7 +59,7 @@ class Samples(SystemModel):
 
         """
 
-        def create_doa_with_gap(gap: float):
+        def create_doa_with_gap(gap: float, fixed_gap: float = None):
             """Create angles with a value gap.
 
             Args:
@@ -76,6 +76,24 @@ class Samples(SystemModel):
             doa_max = getattr(self.params, "doa_max", 90.0)
             doa_resolution = getattr(self.params, "doa_resolution", 0.01)
             decimals = max(0, int(np.ceil(-np.log10(doa_resolution)))) if doa_resolution < 1 else 0
+            if fixed_gap is not None:
+                fixed_gap = float(fixed_gap)
+                span = (M - 1) * fixed_gap
+                if doa_max - doa_min < span:
+                    raise ValueError(
+                        "Samples.set_doa: requested fixed DOA gap does not fit in the configured range"
+                    )
+                start_candidates = np.arange(
+                    doa_min,
+                    doa_max - span + doa_resolution * 0.5,
+                    doa_resolution,
+                )
+                if start_candidates.size == 0:
+                    raise ValueError(
+                        "Samples.set_doa: no valid start positions for requested fixed DOA gap"
+                    )
+                start = float(np.random.choice(start_candidates))
+                return np.round(start + fixed_gap * np.arange(M, dtype=float), decimals=decimals)
             while True:
                 DOA = np.round(
                     np.random.uniform(low=doa_min, high=doa_max, size=M),
@@ -92,7 +110,10 @@ class Samples(SystemModel):
         if doa == None:
             # Generate angels with gap greater than 0.2 rad (nominal case)
             self.doa = np.array(
-                create_doa_with_gap(gap=getattr(self.params, "min_doa_gap", 15.0))
+                create_doa_with_gap(
+                    gap=getattr(self.params, "min_doa_gap", 15.0),
+                    fixed_gap=getattr(self.params, "fixed_doa_gap", None),
+                )
             ) * D2R
         else:
             # Generate
