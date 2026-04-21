@@ -1,0 +1,13 @@
+{
+  "template_name": "phase6_groupb_1p9_coherent_control_gap5_snr10",
+  "method_name": "dbf",
+  "rmse_deg": 0.9189682133425613,
+  "avg_runtime_sec": 0.022111132244530988,
+  "avg_lrmc_runtime_sec": 0.0036558836446007868,
+  "avg_lrmc_iterations": 94.98677777777777,
+  "lrmc_convergence_rate": 0.18633333333333332,
+  "avg_lrmc_final_residual": 0.0,
+  "min_lrmc_eigenvalue": 1e-08,
+  "min_lrmc_singular_value": 9.99970049632667e-09,
+  "num_test_samples": 9000
+}

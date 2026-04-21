@@ -1,0 +1,156 @@
+{
+  "description": "Phase 6 coherent Group B 1.9 lambda classical control cell at gap=2 deg and SNR=15 dB using SS -> LRMC.",
+  "experiment_type": "subspace",
+  "methods": [
+    "dbf",
+    "music",
+    "root-music",
+    "esprit"
+  ],
+  "seed": 42,
+  "scenario_data_path": "phase6_groupb_1p9_coherent_gap2_snr15_45k",
+  "commands": {
+    "CREATE_DATA": true,
+    "LOAD_DATA": false,
+    "TRAIN_MODEL": false,
+    "EVALUATE_MODE": true
+  },
+  "system_model": {
+    "N": 12,
+    "M": 2,
+    "T": 40,
+    "snr": 15,
+    "signal_type": "NarrowBand",
+    "signal_nature": "coherent",
+    "eta": 0,
+    "bias": 0,
+    "sv_noise_var": 0,
+    "array_spacing": 1.9,
+    "geometry_name": "mimo_2d_12ch_groupb_1p9",
+    "doa_min": -15,
+    "doa_max": 15,
+    "elevation_min": -15,
+    "elevation_max": 15,
+    "doa_resolution": 0.01,
+    "min_doa_gap": 2,
+    "fixed_doa_gap": 2,
+    "sensor_positions": [
+      0,
+      4,
+      7,
+      8
+    ],
+    "physical_sensor_positions_2d": [
+      [
+        -15.2,
+        -3.8
+      ],
+      [
+        -7.6,
+        -3.8
+      ],
+      [
+        -1.9,
+        -3.8
+      ],
+      [
+        0,
+        -3.8
+      ],
+      [
+        -7.6,
+        -1.9
+      ],
+      [
+        0,
+        -1.9
+      ],
+      [
+        5.7,
+        -1.9
+      ],
+      [
+        7.6,
+        -1.9
+      ],
+      [
+        0,
+        0
+      ],
+      [
+        7.6,
+        0
+      ],
+      [
+        13.3,
+        0
+      ],
+      [
+        15.2,
+        0
+      ]
+    ],
+    "row_groups": [
+      [
+        0,
+        1,
+        2,
+        3
+      ],
+      [
+        4,
+        5,
+        6,
+        7
+      ],
+      [
+        8,
+        9,
+        10,
+        11
+      ]
+    ],
+    "canonical_row_group": 2,
+    "virtual_array_size": 9,
+    "covariance_mode": "ss_then_lrmc",
+    "use_lrmc": true,
+    "lrmc_rank": 3,
+    "lrmc_solver": "svd",
+    "lrmc_init_strategy": "lag",
+    "lrmc_postprocessing": "none",
+    "lrmc_enforce_toeplitz": false,
+    "lrmc_max_iter": 100,
+    "lrmc_tol": 1e-06,
+    "lrmc_epsilon": 1e-08
+  },
+  "model": {
+    "tau": 8
+  },
+  "dataset": {
+    "samples_size": 45000,
+    "train_test_ratio": 0.2
+  },
+  "report": {
+    "markdown_output": "phase6_groupb_1p9_coherent_fixed_gap_snr_grid_results.md",
+    "markdown_title": "Phase 6 - Group B 1.9 Lambda Coherent Fixed-Gap and SNR Grid",
+    "markdown_description": "Phase 6 compares the coherent Group B SS -> LRMC classical controls against SS -> LRMC -> SubspaceNet -> ESPRIT over a 20-cell fixed-gap and SNR grid.",
+    "markdown_conditions": [
+      "Array: Group B 12-channel 2D hardware geometry",
+      "Physical spacing: 1.9 lambda",
+      "Signals: 2 coherent narrowband targets",
+      "Snapshots: T = 40",
+      "Azimuth and elevation range: [-15 deg, 15 deg]",
+      "Fixed azimuth separations: 1, 2, 3, 4, 5 deg",
+      "SNR sweep: 1, 5, 10, 15 dB",
+      "Preprocessing: spatial smoothing before LRMC",
+      "Learned target: SubspaceNet-ESPRIT",
+      "Control methods: DBF, MUSIC, Root-MUSIC, ESPRIT",
+      "Dataset size per cell: 45,000 samples",
+      "Metric: horizontal-angle RMSE in degrees (periodic matching)"
+    ],
+    "write_summary_csv": true,
+    "markdown_scheme_label": "Gap = 2 deg | SNR = 15 dB | SS -> LRMC"
+  },
+  "template_name": "phase6_groupb_1p9_coherent_control_gap2_snr15",
+  "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase6_groupb_1p9_coherent_fixed_gap_snr_grid\\phase6_groupb_1p9_coherent_control_gap2_snr15.json"
+}

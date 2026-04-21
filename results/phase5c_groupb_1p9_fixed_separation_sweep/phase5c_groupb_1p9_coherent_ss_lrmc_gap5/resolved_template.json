@@ -148,5 +148,5 @@
   },
   "template_name": "phase5c_groupb_1p9_coherent_ss_lrmc_gap5",
   "experiment_type": "subspace",
-  "template_path": "F:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase5c_groupb_1p9_fixed_separation_sweep\\phase5c_groupb_1p9_coherent_ss_lrmc_gap5.json"
+  "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase5c_groupb_1p9_fixed_separation_sweep\\phase5c_groupb_1p9_coherent_ss_lrmc_gap5.json"
 }

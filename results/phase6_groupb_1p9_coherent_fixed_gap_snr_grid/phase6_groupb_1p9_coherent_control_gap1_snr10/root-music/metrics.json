@@ -1,0 +1,13 @@
+{
+  "template_name": "phase6_groupb_1p9_coherent_control_gap1_snr10",
+  "method_name": "root-music",
+  "rmse_deg": 5.482163091717076,
+  "avg_runtime_sec": 0.004322522244765423,
+  "avg_lrmc_runtime_sec": 0.0037734225778905156,
+  "avg_lrmc_iterations": 99.85844444444444,
+  "lrmc_convergence_rate": 0.014222222222222223,
+  "avg_lrmc_final_residual": 0.0,
+  "min_lrmc_eigenvalue": 1e-08,
+  "min_lrmc_singular_value": 9.999566733832565e-09,
+  "num_test_samples": 9000
+}

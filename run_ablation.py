@@ -81,7 +81,7 @@ def parse_args():
 def load_templates(templates_dir: Path) -> Dict[str, Dict]:
     templates = {}
     for path in sorted(templates_dir.rglob("*.json")):
-        with path.open("r", encoding="utf-8") as handle:
+        with path.open("r", encoding="utf-8-sig") as handle:
             template = json.load(handle)
         template_name = path.stem
         template["template_name"] = template_name

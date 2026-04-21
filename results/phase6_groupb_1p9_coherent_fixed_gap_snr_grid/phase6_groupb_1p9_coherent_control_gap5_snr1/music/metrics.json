@@ -1,0 +1,13 @@
+{
+  "template_name": "phase6_groupb_1p9_coherent_control_gap5_snr1",
+  "method_name": "music",
+  "rmse_deg": 1.2753753979956517,
+  "avg_runtime_sec": 0.023635876677830108,
+  "avg_lrmc_runtime_sec": 0.003924439122285952,
+  "avg_lrmc_iterations": 99.82711111111111,
+  "lrmc_convergence_rate": 0.01711111111111111,
+  "avg_lrmc_final_residual": 0.0,
+  "min_lrmc_eigenvalue": 1e-08,
+  "min_lrmc_singular_value": 9.999996415052287e-09,
+  "num_test_samples": 9000
+}
