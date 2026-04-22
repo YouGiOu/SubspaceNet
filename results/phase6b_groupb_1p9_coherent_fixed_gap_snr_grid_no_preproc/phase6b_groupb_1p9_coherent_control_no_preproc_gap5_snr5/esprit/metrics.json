@@ -1,0 +1,13 @@
+{
+  "template_name": "phase6b_groupb_1p9_coherent_control_no_preproc_gap5_snr5",
+  "method_name": "esprit",
+  "rmse_deg": 8.256918474673826,
+  "avg_runtime_sec": 0.00029991196666777695,
+  "avg_lrmc_runtime_sec": null,
+  "avg_lrmc_iterations": null,
+  "lrmc_convergence_rate": null,
+  "avg_lrmc_final_residual": null,
+  "min_lrmc_eigenvalue": null,
+  "min_lrmc_singular_value": null,
+  "num_test_samples": 9000
+}

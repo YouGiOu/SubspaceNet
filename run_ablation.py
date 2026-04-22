@@ -148,6 +148,37 @@ def save_json(path: Path, payload: Dict):
         json.dump(payload, handle, indent=2, default=convert)
 
 
+def load_existing_result(result_dir: Path, template: Dict, method_name: str) -> Optional[Dict]:
+    metrics_path = result_dir / "metrics.json"
+    if not metrics_path.exists():
+        return None
+    try:
+        with metrics_path.open("r", encoding="utf-8") as handle:
+            payload = json.load(handle)
+    except Exception:
+        return None
+    rmse_deg = payload.get("rmse_deg")
+    if rmse_deg is None:
+        return None
+    result = {
+        "scheme": template["template_name"],
+        "method": method_name,
+        "rmse_deg": float(rmse_deg),
+        "avg_runtime_sec": payload.get("avg_runtime_sec"),
+        "avg_lrmc_runtime_sec": payload.get("avg_lrmc_runtime_sec"),
+        "avg_lrmc_iterations": payload.get("avg_lrmc_iterations"),
+        "lrmc_convergence_rate": payload.get("lrmc_convergence_rate"),
+        "avg_lrmc_final_residual": payload.get("avg_lrmc_final_residual"),
+        "min_lrmc_eigenvalue": payload.get("min_lrmc_eigenvalue"),
+        "min_lrmc_singular_value": payload.get("min_lrmc_singular_value"),
+    }
+    print(
+        f"Skipping completed method for {template['template_name']} / {method_name} "
+        f"using existing metrics at {metrics_path}"
+    )
+    return result
+
+
 def periodic_rmse_deg(predictions_deg: np.ndarray, targets_deg: np.ndarray) -> float:
     predictions_deg = np.asarray(predictions_deg, dtype=float)
     targets_deg = np.asarray(targets_deg, dtype=float)
@@ -494,6 +525,10 @@ def run_experiment(repo_root: Path, template: Dict, results_root: Path) -> List[
         for method_name in methods:
             method_dir = experiment_dir / method_name
             ensure_dirs(method_dir)
+            existing_result = load_existing_result(method_dir, template, method_name)
+            if existing_result is not None:
+                results.append(existing_result)
+                continue
             method_class = TRADITIONAL_METHODS[method_name]
             results.append(
                 run_traditional_method(
@@ -509,6 +544,10 @@ def run_experiment(repo_root: Path, template: Dict, results_root: Path) -> List[
         for method_name in methods:
             method_dir = experiment_dir / method_name
             ensure_dirs(method_dir)
+            existing_result = load_existing_result(method_dir, template, method_name)
+            if existing_result is not None:
+                results.append(existing_result)
+                continue
             results.append(
                 train_subspacenet_variant(
                     repo_root=repo_root,

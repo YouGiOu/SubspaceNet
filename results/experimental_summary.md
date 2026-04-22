@@ -468,12 +468,15 @@ Current repo style prefers:
 ## 13. Current Practical Conclusions
 
 1. The project's most validated hardware-relevant regime is now Group B `1.9 lambda`.
-2. Classical Group B performance is strong once row geometry is modeled correctly.
-3. Coherent Group B remains a meaningful learned target.
-4. Non-coherent Group B is easier, but still valuable for testing learned stability and low-snapshot boundaries.
-5. SubspaceNet-ESPRIT is currently the strongest learned path.
-6. Root-MUSIC remains the most fragile component in both classical and learned forms.
-7. The experiment framework is now mature enough that future work should be targeted:
-   - low-separation, especially coherent `1 - 2 deg`
-   - low-snapshot
-   - or direct SubspaceNet improvements
+2. Classical Group B performance is strong once row geometry is modeled correctly and the canonical `SS -> LRMC` front end is used.
+3. For coherent Group B, `SS -> LRMC` is not merely a mild improvement for subspace methods; it is the enabling preprocessing step that makes MUSIC, Root-MUSIC, and ESPRIT workable on the hardware geometry.
+4. Without `SS -> LRMC`, coherent Group B subspace baselines largely collapse across the tested fixed-gap and SNR grid, while DBF remains comparatively unaffected; this indicates that the main preprocessing gain is structural recovery of a usable subspace model rather than a uniform improvement for every estimator.
+5. In coherent Group B, small angular separation is now the clearest failure axis. In the tested `T = 40`, `1 - 15 dB` regime, gap size matters much more than SNR, and the strongest classical degradation still occurs around `1 - 2 deg`.
+6. Coherent Group B therefore remains a meaningful learned target, especially in low-separation regimes where the classical `SS -> LRMC` pipeline is still imperfect.
+7. SubspaceNet-ESPRIT is currently the strongest learned path and produces its most meaningful gains exactly in the hard coherent low-separation cells, where it reduces multi-degree classical errors to sub-degree RMSE.
+8. Non-coherent Group B is easier than coherent Group B, but still valuable for testing learned stability and low-snapshot boundaries.
+9. Root-MUSIC remains the most fragile component in both classical and learned forms and should still be treated as experimental unless it is the explicit object of study.
+10. The experiment framework is now mature enough that future work should be targeted:
+   - coherent low-separation Group B, especially `1 - 2 deg`
+   - combined hard regimes such as low-separation plus low-snapshot
+   - focused SubspaceNet-ESPRIT improvements and preprocessing ablations
