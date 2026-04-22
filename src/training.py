@@ -39,7 +39,6 @@ from pathlib import Path
 import torch.optim as optim
 from datetime import datetime
 import re
-from torch.autograd import Variable
 from tqdm import tqdm
 from torch.optim import lr_scheduler
 from sklearn.model_selection import train_test_split
@@ -115,6 +114,7 @@ class TrainingParams(object):
         num_workers: int = 0,
         pin_memory: bool = None,
         persistent_workers: bool = None,
+        prefetch_factor: int = None,
     ):
         """
         Sets DataLoader performance options.
@@ -124,6 +124,7 @@ class TrainingParams(object):
         - num_workers (int): Number of DataLoader workers.
         - pin_memory (bool): Whether to pin host memory for GPU transfer.
         - persistent_workers (bool): Whether to keep workers alive across epochs.
+        - prefetch_factor (int): Number of prefetched batches per worker.
 
         Returns
         -------
@@ -136,6 +137,12 @@ class TrainingParams(object):
         if persistent_workers is None:
             persistent_workers = self.num_workers > 0
         self.persistent_workers = bool(persistent_workers) and self.num_workers > 0
+        if self.num_workers > 0:
+            if prefetch_factor is None:
+                prefetch_factor = 4
+            self.prefetch_factor = int(prefetch_factor)
+        else:
+            self.prefetch_factor = None
         return self
 
     def set_epochs(self, epochs: int):
@@ -338,6 +345,9 @@ class TrainingParams(object):
         validation_batch_size = int(
             getattr(self, "validation_batch_size", getattr(self, "batch_size", 1))
         )
+        loader_kwargs = {}
+        if num_workers > 0 and getattr(self, "prefetch_factor", None) is not None:
+            loader_kwargs["prefetch_factor"] = int(self.prefetch_factor)
         # Transform datasets into DataLoader objects
         self.train_dataset = torch.utils.data.DataLoader(
             train_dataset,
@@ -347,6 +357,7 @@ class TrainingParams(object):
             num_workers=num_workers,
             pin_memory=pin_memory,
             persistent_workers=persistent_workers,
+            **loader_kwargs,
         )
         self.valid_dataset = torch.utils.data.DataLoader(
             valid_dataset,
@@ -356,6 +367,7 @@ class TrainingParams(object):
             num_workers=num_workers,
             pin_memory=pin_memory,
             persistent_workers=persistent_workers,
+            **loader_kwargs,
         )
         return self
 
@@ -451,9 +463,10 @@ def train_model(training_params: TrainingParams, model_name: str, checkpoint_pat
         for data in tqdm(training_params.train_dataset):
             Rx, DOA = data
             train_length += DOA.shape[0]
-            # Cast observations and DoA to Variables
-            Rx = Variable(Rx, requires_grad=True).to(device, non_blocking=True)
-            DOA = Variable(DOA, requires_grad=True).to(device, non_blocking=True)
+            # Inputs do not require gradients; keeping them as plain tensors avoids
+            # unnecessary autograd bookkeeping and reduces host-to-device overhead.
+            Rx = Rx.to(device, non_blocking=True)
+            DOA = DOA.to(device, non_blocking=True)
             optimizer.zero_grad(set_to_none=True)
             # Get model output
             model_output = model(Rx)

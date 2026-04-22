@@ -425,6 +425,7 @@ def train_subspacenet_variant(
             num_workers=training_settings.get("num_workers", 0),
             pin_memory=training_settings.get("pin_memory"),
             persistent_workers=training_settings.get("persistent_workers"),
+            prefetch_factor=training_settings.get("prefetch_factor"),
         )
         .set_epochs(training_settings["epochs"])
         .set_model(model=model_config)

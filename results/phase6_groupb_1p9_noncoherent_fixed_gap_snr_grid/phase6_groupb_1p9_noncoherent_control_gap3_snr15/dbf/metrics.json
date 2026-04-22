@@ -1,0 +1,13 @@
+{
+  "template_name": "phase6_groupb_1p9_noncoherent_control_gap3_snr15",
+  "method_name": "dbf",
+  "rmse_deg": 4.282475607537384,
+  "avg_runtime_sec": 0.022774876811155184,
+  "avg_lrmc_runtime_sec": 0.003976748311001251,
+  "avg_lrmc_iterations": 99.56477777777778,
+  "lrmc_convergence_rate": 0.03255555555555555,
+  "avg_lrmc_final_residual": 0.0,
+  "min_lrmc_eigenvalue": 1e-08,
+  "min_lrmc_singular_value": 9.99800161221212e-09,
+  "num_test_samples": 9000
+}

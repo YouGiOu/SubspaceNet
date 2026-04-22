@@ -1,0 +1,13 @@
+{
+  "template_name": "phase6_groupb_1p9_noncoherent_control_gap4_snr1",
+  "method_name": "root-music",
+  "rmse_deg": 0.13733610875910512,
+  "avg_runtime_sec": 0.004314643277784247,
+  "avg_lrmc_runtime_sec": 0.0037739261778196023,
+  "avg_lrmc_iterations": 100.0,
+  "lrmc_convergence_rate": 0.0,
+  "avg_lrmc_final_residual": 0.0,
+  "min_lrmc_eigenvalue": 1e-08,
+  "min_lrmc_singular_value": 9.999997663160543e-09,
+  "num_test_samples": 9000
+}

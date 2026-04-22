@@ -130,16 +130,17 @@
                     "train_test_ratio":  0.2
                 },
     "training":  {
-                     "batch_size":  128,
-                     "validation_batch_size":  256,
-                     "num_workers":  4,
+                     "batch_size":  256,
+                     "validation_batch_size":  512,
+                     "num_workers":  8,
                      "pin_memory":  true,
                      "persistent_workers":  true,
                      "epochs":  80,
                      "learning_rate":  1E-05,
                      "weight_decay":  1E-09,
                      "scheduler_step_size":  50,
-                     "scheduler_gamma":  0.3
+                     "scheduler_gamma":  0.3,
+                     "prefetch_factor":  4
                  },
     "report":  {
                    "markdown_output":  "phase6_groupb_1p9_coherent_fixed_gap_snr_grid_results.md",
