@@ -199,6 +199,9 @@ After the geometry fixes and the coherent/non-coherent 2D studies, the project h
 - classical Group B becomes much easier
 - MUSIC becomes almost trivial in many settings
 - Root-MUSIC / ESPRIT become very strong after LRMC-based preprocessing
+- in the non-coherent fixed-gap / SNR grid, angular separation is not the dominant failure axis once SNR is moderate; even `1 deg` becomes highly workable for classical MUSIC / Root-MUSIC / ESPRIT
+- unlike the coherent case, raw non-coherent MUSIC is already very strong at moderate SNR even without `SS -> LRMC`, while raw Root-MUSIC / ESPRIT still collapse and depend heavily on preprocessing
+- `SS -> LRMC` remains important in the non-coherent regime mainly because it rescues Root-MUSIC / ESPRIT and stabilizes the `1 deg`, low-SNR corner, not because non-coherent MUSIC uniformly requires it
 - this regime is easier than the coherent one, but still useful for testing whether learned heads stabilize
 
 ## 6. Phase 4A: Large-Sample Coherent SubspaceNet on Group B 1.9 Lambda
@@ -459,7 +462,14 @@ Current repo style prefers:
   - coherent / noncoherent when relevant
 - explicit `markdown_group_label` and `markdown_scheme_label` in templates for readable result tables
 
-### 12.5 For SubspaceNet work
+### 12.5 For Windows path-length safety
+
+- be careful with Windows path-length limits when defining new `scenario_data_path` values
+- long experiment names combined with long dataset filenames can cause `torch.save(...)` to fail even when the directory exists
+- keep cache-folder names shorter when the template name or signal label is already long, especially for large-sample sweeps
+- if a run fails at dataset save time with "file cannot be opened" on Windows, check the full output path length before assuming the dataset code is wrong
+
+### 12.6 For SubspaceNet work
 
 - keep dataset caching enabled for large runs
 - prefer ESPRIT-first unless Root-MUSIC is the explicit research target
@@ -474,9 +484,12 @@ Current repo style prefers:
 5. In coherent Group B, small angular separation is now the clearest failure axis. In the tested `T = 40`, `1 - 15 dB` regime, gap size matters much more than SNR, and the strongest classical degradation still occurs around `1 - 2 deg`.
 6. Coherent Group B therefore remains a meaningful learned target, especially in low-separation regimes where the classical `SS -> LRMC` pipeline is still imperfect.
 7. SubspaceNet-ESPRIT is currently the strongest learned path and produces its most meaningful gains exactly in the hard coherent low-separation cells, where it reduces multi-degree classical errors to sub-degree RMSE.
-8. Non-coherent Group B is easier than coherent Group B, but still valuable for testing learned stability and low-snapshot boundaries.
-9. Root-MUSIC remains the most fragile component in both classical and learned forms and should still be treated as experimental unless it is the explicit object of study.
-10. The experiment framework is now mature enough that future work should be targeted:
+8. In non-coherent Group B, the fixed-gap / SNR grid confirms that this regime is much easier than the coherent one: once SNR is moderate, classical MUSIC / Root-MUSIC / ESPRIT with `SS -> LRMC` remain very strong even at `1 deg`.
+9. The non-coherent Phase 6 results also show an important method split without preprocessing: raw MUSIC can already be excellent at moderate SNR, whereas raw Root-MUSIC / ESPRIT still fail badly; in the non-coherent regime, `SS -> LRMC` is therefore most important for subspace-method rescue and low-SNR robustness rather than for making every classical method viable.
+10. In the non-coherent regime, SubspaceNet-ESPRIT is still strongest in the hardest `1 deg`, low-SNR cells, but it is no longer uniformly better than the best classical preprocessed method once the task becomes easy; this means the main remaining learned value is in hard-edge robustness rather than broad average dominance.
+11. Root-MUSIC remains the most fragile component in both classical and learned forms and should still be treated as experimental unless it is the explicit object of study.
+12. The experiment framework is now mature enough that future work should be targeted:
    - coherent low-separation Group B, especially `1 - 2 deg`
    - combined hard regimes such as low-separation plus low-snapshot
-   - focused SubspaceNet-ESPRIT improvements and preprocessing ablations
+   - focused SubspaceNet-ESPRIT improvements in the hard coherent cells
+   - preprocessing ablations that distinguish when non-coherent MUSIC can skip `SS -> LRMC` versus when Root-MUSIC / ESPRIT still require it
