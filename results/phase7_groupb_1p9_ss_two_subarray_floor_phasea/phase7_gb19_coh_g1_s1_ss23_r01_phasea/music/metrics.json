@@ -1,0 +1,13 @@
+{
+  "template_name": "phase7_gb19_coh_g1_s1_ss23_r01_phasea",
+  "method_name": "music",
+  "rmse_deg": 6.4984299791964135,
+  "avg_runtime_sec": 0.09028434935,
+  "avg_lrmc_runtime_sec": 0.016990547299999926,
+  "avg_lrmc_iterations": 98.8235,
+  "lrmc_convergence_rate": 0.0705,
+  "avg_lrmc_final_residual": 0.0,
+  "min_lrmc_eigenvalue": 1e-08,
+  "min_lrmc_singular_value": 9.999995918901218e-09,
+  "num_test_samples": 2000
+}
