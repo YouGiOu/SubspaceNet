@@ -142,6 +142,8 @@ def build_subspacenet_input(
             rank = int(system_model_params.M) + 1
         covariance = np.cov(np.asarray(X.cpu().numpy(), dtype=np.complex128))
         row_groups = getattr(system_model_params, "row_groups", None)
+        ss_num_subarrays = getattr(system_model_params, "ss_num_subarrays", None)
+        ss_row_subset = getattr(system_model_params, "ss_row_subset", None)
         covariance_mode = str(
             getattr(system_model_params, "covariance_mode", "lrmc")
         ).lower()
@@ -161,6 +163,8 @@ def build_subspacenet_input(
                     getattr(system_model_params, "lrmc_enforce_toeplitz", False)
                 ),
                 variant="average_raw",
+                ss_num_subarrays=ss_num_subarrays,
+                ss_row_subset=ss_row_subset,
             )
         elif row_groups and covariance_mode in {"lrmc_only", "lrmc"}:
             _, _, _, completed_covariance, diagnostics = complete_rowwise_nula_covariance(
@@ -178,6 +182,8 @@ def build_subspacenet_input(
                     getattr(system_model_params, "lrmc_enforce_toeplitz", False)
                 ),
                 variant="canonical",
+                ss_num_subarrays=ss_num_subarrays,
+                ss_row_subset=ss_row_subset,
             )
         elif row_groups and covariance_mode == "lrmc_then_ss":
             _, _, _, completed_covariance, diagnostics = complete_rowwise_nula_covariance(
@@ -195,6 +201,8 @@ def build_subspacenet_input(
                     getattr(system_model_params, "lrmc_enforce_toeplitz", False)
                 ),
                 variant="average_completed",
+                ss_num_subarrays=ss_num_subarrays,
+                ss_row_subset=ss_row_subset,
             )
         else:
             _, _, _, completed_covariance, diagnostics = complete_nula_covariance_from_covariance(
@@ -632,6 +640,13 @@ def get_experiment_suffix(system_model_params: SystemModelParams):
         suffix += f"gap={min_doa_gap}_"
     if fixed_doa_gap is not None:
         suffix += f"fixedgap={fixed_doa_gap}_"
+    ss_num_subarrays = getattr(system_model_params, "ss_num_subarrays", None)
+    ss_row_subset = getattr(system_model_params, "ss_row_subset", None)
+    if ss_num_subarrays is not None:
+        suffix += f"ssn={int(ss_num_subarrays)}_"
+    if ss_row_subset is not None:
+        subset = "-".join(str(int(index)) for index in ss_row_subset)
+        suffix += f"ssrows={subset}_"
     if getattr(system_model_params, "use_lrmc", False):
         rank = getattr(system_model_params, "lrmc_rank", None)
         if rank is None:

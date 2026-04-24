@@ -27,6 +27,10 @@ class LRMCDiagnostics:
     min_eigenvalue: Optional[float] = None
     min_singular_value: Optional[float] = None
     observable_lags: List[int] = field(default_factory=list)
+    selected_row_subset: List[int] = field(default_factory=list)
+    num_averaged_row_subarrays: Optional[int] = None
+    smoothed_covariance_shape: Optional[Tuple[int, int]] = None
+    lrmc_after_ss: Optional[bool] = None
 
 
 DEFAULT_ROW_GROUPS_2D: Tuple[Tuple[int, ...], ...] = (
@@ -69,6 +73,65 @@ def average_covariance_blocks(blocks: Sequence[np.ndarray]) -> np.ndarray:
             raise ValueError("average_covariance_blocks: all blocks must have the same shape")
     stacked = np.stack([np.asarray(block, dtype=np.complex128) for block in blocks], axis=0)
     return np.mean(stacked, axis=0)
+
+
+def resolve_row_subset(
+    row_groups: Sequence[Sequence[int]],
+    ss_num_subarrays: Optional[int] = None,
+    ss_row_subset: Optional[Sequence[int]] = None,
+) -> Tuple[int, ...]:
+    """Validates and resolves the selected row-group subset in original row order."""
+    total_groups = len(tuple(row_groups))
+    if total_groups <= 0:
+        raise ValueError("resolve_row_subset: row_groups must not be empty")
+
+    if ss_num_subarrays is None and ss_row_subset is None:
+        return tuple(range(total_groups))
+
+    if ss_num_subarrays is None and ss_row_subset is not None:
+        ss_num_subarrays = len(tuple(ss_row_subset))
+
+    if ss_num_subarrays is None:
+        raise ValueError("resolve_row_subset: ss_num_subarrays could not be resolved")
+    ss_num_subarrays = int(ss_num_subarrays)
+    if ss_num_subarrays <= 0 or ss_num_subarrays > total_groups:
+        raise ValueError(
+            "resolve_row_subset: ss_num_subarrays must be between 1 and the number of row groups"
+        )
+
+    if ss_row_subset is None:
+        if ss_num_subarrays == total_groups:
+            return tuple(range(total_groups))
+        raise ValueError(
+            "resolve_row_subset: explicit ss_row_subset is required when averaging fewer than all row groups"
+        )
+
+    resolved_subset = tuple(int(index) for index in ss_row_subset)
+    if len(resolved_subset) != ss_num_subarrays:
+        raise ValueError(
+            "resolve_row_subset: ss_row_subset length must match ss_num_subarrays"
+        )
+    if len(set(resolved_subset)) != len(resolved_subset):
+        raise ValueError("resolve_row_subset: ss_row_subset must not contain duplicates")
+    if any(index < 0 or index >= total_groups for index in resolved_subset):
+        raise ValueError("resolve_row_subset: ss_row_subset contains out-of-range indices")
+    if resolved_subset != tuple(sorted(resolved_subset)):
+        raise ValueError(
+            "resolve_row_subset: ss_row_subset must preserve the original row-group order"
+        )
+    return resolved_subset
+
+
+def select_covariance_blocks(
+    blocks: Sequence[np.ndarray],
+    row_subset: Sequence[int],
+) -> List[np.ndarray]:
+    """Returns covariance blocks selected by row-group index, preserving order."""
+    blocks = list(blocks)
+    selected = [blocks[int(index)] for index in row_subset]
+    if not selected:
+        raise ValueError("select_covariance_blocks: selected row subset must not be empty")
+    return selected
 
 
 def enumerate_nula_lags(sensor_positions: Iterable[float]) -> Dict[int, List[Tuple[int, int]]]:
@@ -353,6 +416,10 @@ def combine_diagnostics(diagnostics: Sequence[LRMCDiagnostics]) -> LRMCDiagnosti
         if any(diag.min_singular_value is not None for diag in diagnostics)
         else None,
         observable_lags=sorted({lag for diag in diagnostics for lag in diag.observable_lags}),
+        selected_row_subset=diagnostics[0].selected_row_subset,
+        num_averaged_row_subarrays=diagnostics[0].num_averaged_row_subarrays,
+        smoothed_covariance_shape=diagnostics[0].smoothed_covariance_shape,
+        lrmc_after_ss=diagnostics[0].lrmc_after_ss,
     )
     return combined
 
@@ -445,6 +512,8 @@ def complete_rowwise_nula_covariance(
     enforce_toeplitz: bool = False,
     nuclear_ridge: float = 1e-8,
     variant: str = "canonical",
+    ss_num_subarrays: Optional[int] = None,
+    ss_row_subset: Optional[Sequence[int]] = None,
 ) -> Tuple[np.ndarray, Optional[np.ndarray], Optional[np.ndarray], np.ndarray, LRMCDiagnostics]:
     """
     Completes a row-replicated NULA covariance according to the requested variant.
@@ -455,8 +524,14 @@ def complete_rowwise_nula_covariance(
         - average_completed: complete each row block independently, then average completions
     """
     row_blocks = split_covariance_into_blocks(covariance, row_groups=row_groups)
+    selected_row_subset = resolve_row_subset(
+        row_groups=row_groups,
+        ss_num_subarrays=ss_num_subarrays,
+        ss_row_subset=ss_row_subset,
+    )
+    selected_blocks = select_covariance_blocks(row_blocks, selected_row_subset)
     if variant == "average_raw":
-        smoothed_covariance = average_covariance_blocks(row_blocks)
+        smoothed_covariance = average_covariance_blocks(selected_blocks)
         covariance_out, partial, mask, completed, diagnostics = complete_nula_covariance_from_covariance(
             covariance=smoothed_covariance,
             sensor_positions=sensor_positions,
@@ -471,6 +546,10 @@ def complete_rowwise_nula_covariance(
             nuclear_ridge=nuclear_ridge,
         )
         diagnostics.runtime_sec = float(diagnostics.runtime_sec)
+        diagnostics.selected_row_subset = list(selected_row_subset)
+        diagnostics.num_averaged_row_subarrays = len(selected_row_subset)
+        diagnostics.smoothed_covariance_shape = tuple(smoothed_covariance.shape)
+        diagnostics.lrmc_after_ss = True
         return covariance_out, partial, mask, completed, diagnostics
 
     if variant == "average_completed":
@@ -479,7 +558,7 @@ def complete_rowwise_nula_covariance(
         partial = None
         mask = None
         covariance_out = None
-        for block in row_blocks:
+        for block in selected_blocks:
             covariance_out, partial, mask, completed, diagnostics = complete_nula_covariance_from_covariance(
                 covariance=block,
                 sensor_positions=sensor_positions,
@@ -497,11 +576,15 @@ def complete_rowwise_nula_covariance(
             diagnostics_list.append(diagnostics)
         completed = average_covariance_blocks(completions)
         diagnostics = combine_diagnostics(diagnostics_list)
+        diagnostics.selected_row_subset = list(selected_row_subset)
+        diagnostics.num_averaged_row_subarrays = len(selected_row_subset)
+        diagnostics.smoothed_covariance_shape = tuple(completed.shape)
+        diagnostics.lrmc_after_ss = False
         return covariance_out, partial, mask, completed, diagnostics
 
     canonical_index = -1
     covariance_out, partial, mask, completed, diagnostics = complete_nula_covariance_from_covariance(
-        covariance=row_blocks[canonical_index],
+        covariance=selected_blocks[canonical_index],
         sensor_positions=sensor_positions,
         virtual_size=virtual_size,
         rank=rank,
@@ -513,6 +596,10 @@ def complete_rowwise_nula_covariance(
         enforce_toeplitz=enforce_toeplitz,
         nuclear_ridge=nuclear_ridge,
     )
+    diagnostics.selected_row_subset = list(selected_row_subset)
+    diagnostics.num_averaged_row_subarrays = len(selected_row_subset)
+    diagnostics.smoothed_covariance_shape = tuple(selected_blocks[canonical_index].shape)
+    diagnostics.lrmc_after_ss = False
     return covariance_out, partial, mask, completed, diagnostics
 
 

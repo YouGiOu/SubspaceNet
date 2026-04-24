@@ -50,8 +50,10 @@ Methods:
 # Imports
 import copy
 import numpy as np
-import scipy
-import scipy.signal
+try:
+    import scipy.signal as scipy_signal
+except Exception:
+    scipy_signal = None
 from src.lrmc import (
     DEFAULT_ROW_GROUPS_2D,
     average_covariance_blocks,
@@ -59,11 +61,32 @@ from src.lrmc import (
     complete_nula_covariance_from_covariance,
     complete_rowwise_nula_covariance,
     compute_sample_covariance,
+    resolve_row_subset,
+    select_covariance_blocks,
     split_covariance_into_blocks,
 )
 from src.models import SubspaceNet
 from src.system_model import SystemModel
 from src.utils import sum_of_diag, find_roots, R2D
+
+
+def _find_peaks_fallback(spectrum: np.ndarray):
+    """Return local-maxima indices when SciPy peak finding is unavailable."""
+    spectrum = np.asarray(spectrum).reshape(-1)
+    if spectrum.size < 3:
+        return np.arange(spectrum.size, dtype=int)
+
+    peaks = []
+    for idx in range(1, spectrum.size - 1):
+        left = spectrum[idx - 1]
+        center = spectrum[idx]
+        right = spectrum[idx + 1]
+        if center >= left and center >= right and (center > left or center > right):
+            peaks.append(idx)
+
+    if not peaks:
+        peaks = [int(np.argmax(spectrum))]
+    return np.asarray(peaks, dtype=int)
 
 
 class SubspaceMethod(object):
@@ -274,6 +297,9 @@ class SubspaceMethod(object):
 
         self.last_lrmc_diagnostics = None
 
+        ss_num_subarrays = getattr(self.system_model.params, "ss_num_subarrays", None)
+        ss_row_subset = getattr(self.system_model.params, "ss_row_subset", None)
+
         def spatial_smoothing_covariance(X: np.ndarray):
             """
             Calculates the covariance matrix using spatial smoothing technique.
@@ -290,7 +316,14 @@ class SubspaceMethod(object):
             if row_groups:
                 covariance = compute_sample_covariance(X)
                 blocks = split_covariance_into_blocks(covariance, row_groups)
-                return average_covariance_blocks(blocks)
+                selected_subset = resolve_row_subset(
+                    row_groups=row_groups,
+                    ss_num_subarrays=ss_num_subarrays,
+                    ss_row_subset=ss_row_subset,
+                )
+                return average_covariance_blocks(
+                    select_covariance_blocks(blocks, selected_subset)
+                )
             # Define the sub-arrays size
             sub_array_size = int(self.system_model.params.N / 2) + 1
             # Define the number of sub-arrays
@@ -364,6 +397,8 @@ class SubspaceMethod(object):
                     ),
                     nuclear_ridge=getattr(self.system_model.params, "lrmc_nuclear_ridge", 1e-8),
                     variant=variant,
+                    ss_num_subarrays=ss_num_subarrays,
+                    ss_row_subset=ss_row_subset,
                 )
                 self.last_lrmc_diagnostics = diagnostics
                 return self.apply_postprocessing(completed_covariance)
@@ -403,6 +438,8 @@ class SubspaceMethod(object):
                 ),
                 nuclear_ridge=getattr(self.system_model.params, "lrmc_nuclear_ridge", 1e-8),
                 variant="average_completed",
+                ss_num_subarrays=ss_num_subarrays,
+                ss_row_subset=ss_row_subset,
             )
             self.last_lrmc_diagnostics = diagnostics
             return self.apply_postprocessing(completed_covariance)
@@ -425,6 +462,8 @@ class SubspaceMethod(object):
                 ),
                 nuclear_ridge=getattr(self.system_model.params, "lrmc_nuclear_ridge", 1e-8),
                 variant="average_raw",
+                ss_num_subarrays=ss_num_subarrays,
+                ss_row_subset=ss_row_subset,
             )
             self.last_lrmc_diagnostics = diagnostics
             return self.apply_postprocessing(completed_covariance)
@@ -587,7 +626,10 @@ class MUSIC(SubspaceMethod):
             peaks (list): the spectrum ordered peaks.
         """
         # Find spectrum peaks
-        peaks = list(scipy.signal.find_peaks(spectrum)[0])
+        if scipy_signal is not None:
+            peaks = list(scipy_signal.find_peaks(spectrum)[0])
+        else:
+            peaks = list(_find_peaks_fallback(spectrum))
         # Sort the peak by their amplitude
         peaks.sort(key=lambda x: spectrum[x], reverse=True)
         return peaks
