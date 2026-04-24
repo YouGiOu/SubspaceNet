@@ -1,0 +1,154 @@
+﻿{
+    "description":  "Phase 6B Group B 1.9 lambda non-coherent SS -\u003e LRMC classical control at gap=1 deg, SNR=1 dB, T=4.",
+    "experiment_type":  "subspace",
+    "methods":  [
+                    "dbf",
+                    "music",
+                    "root-music",
+                    "esprit"
+                ],
+    "seed":  42,
+    "scenario_data_path":  "phase6b_groupb_1p9_noncoherent_gap1_snr1_t4_45k",
+    "commands":  {
+                     "CREATE_DATA":  true,
+                     "LOAD_DATA":  false,
+                     "TRAIN_MODEL":  false,
+                     "EVALUATE_MODE":  true
+                 },
+    "system_model":  {
+                         "N":  12,
+                         "M":  2,
+                         "T":  4,
+                         "snr":  1,
+                         "signal_type":  "NarrowBand",
+                         "signal_nature":  "non-coherent",
+                         "eta":  0,
+                         "bias":  0,
+                         "sv_noise_var":  0,
+                         "array_spacing":  1.9,
+                         "geometry_name":  "mimo_2d_12ch_groupb_1p9",
+                         "doa_min":  -15,
+                         "doa_max":  15,
+                         "elevation_min":  -15,
+                         "elevation_max":  15,
+                         "doa_resolution":  0.01,
+                         "min_doa_gap":  1,
+                         "fixed_doa_gap":  1,
+                         "sensor_positions":  [
+                                                  0,
+                                                  4,
+                                                  7,
+                                                  8
+                                              ],
+                         "physical_sensor_positions_2d":  [
+                                                              [
+                                                                  -15.2,
+                                                                  -3.8
+                                                              ],
+                                                              [
+                                                                  -7.6,
+                                                                  -3.8
+                                                              ],
+                                                              [
+                                                                  -1.9,
+                                                                  -3.8
+                                                              ],
+                                                              [
+                                                                  0,
+                                                                  -3.8
+                                                              ],
+                                                              [
+                                                                  -7.6,
+                                                                  -1.9
+                                                              ],
+                                                              [
+                                                                  0,
+                                                                  -1.9
+                                                              ],
+                                                              [
+                                                                  5.7,
+                                                                  -1.9
+                                                              ],
+                                                              [
+                                                                  7.6,
+                                                                  -1.9
+                                                              ],
+                                                              [
+                                                                  0,
+                                                                  0
+                                                              ],
+                                                              [
+                                                                  7.6,
+                                                                  0
+                                                              ],
+                                                              [
+                                                                  13.3,
+                                                                  0
+                                                              ],
+                                                              [
+                                                                  15.2,
+                                                                  0
+                                                              ]
+                                                          ],
+                         "row_groups":  [
+                                            [
+                                                0,
+                                                1,
+                                                2,
+                                                3
+                                            ],
+                                            [
+                                                4,
+                                                5,
+                                                6,
+                                                7
+                                            ],
+                                            [
+                                                8,
+                                                9,
+                                                10,
+                                                11
+                                            ]
+                                        ],
+                         "canonical_row_group":  2,
+                         "virtual_array_size":  9,
+                         "lrmc_rank":  3,
+                         "lrmc_solver":  "svd",
+                         "lrmc_init_strategy":  "lag",
+                         "lrmc_postprocessing":  "none",
+                         "lrmc_enforce_toeplitz":  false,
+                         "lrmc_max_iter":  100,
+                         "lrmc_tol":  1E-06,
+                         "lrmc_epsilon":  1E-08,
+                         "covariance_mode":  "ss_then_lrmc",
+                         "use_lrmc":  true
+                     },
+    "model":  {
+                  "tau":  8
+              },
+    "dataset":  {
+                    "samples_size":  45000,
+                    "train_test_ratio":  0.2
+                },
+    "report":  {
+                   "markdown_output":  "phase6b_groupb_1p9_fixed_gap1_snr1_snapshot_breakdown_results.md",
+                   "markdown_title":  "Phase 6B - Group B 1.9 Lambda Hard-Regime Snapshot Breakdown",
+                   "markdown_description":  "Phase 6B sweeps snapshots in the hardest currently targeted Group B regime (fixed gap = 1 deg, fixed SNR = 1 dB) and compares raw classical controls, SS -\u003e LRMC classical controls, and SS -\u003e LRMC -\u003e SubspaceNet -\u003e ESPRIT.",
+                   "markdown_conditions":  [
+                                               "Array: Group B 12-channel 2D hardware geometry",
+                                               "Physical spacing: 1.9 lambda",
+                                               "Signals: coherent and non-coherent narrowband targets",
+                                               "Snapshots sweep: T = 1, 2, 4, 8, 16, 25",
+                                               "Fixed azimuth separation: 1 deg",
+                                               "Fixed SNR: 1 dB",
+                                               "Learned target: SS -\u003e LRMC -\u003e SubspaceNet -\u003e ESPRIT",
+                                               "Control branches: raw classical and SS -\u003e LRMC classical",
+                                               "Control methods: DBF, MUSIC, Root-MUSIC, ESPRIT",
+                                               "Dataset size per cell: 45,000 samples",
+                                               "Metric: horizontal-angle RMSE in degrees (periodic matching)"
+                                           ],
+                   "write_summary_csv":  true,
+                   "markdown_group_label":  "non-coherent",
+                   "markdown_scheme_label":  "T = 4 | SS -\u003e LRMC"
+               }
+}

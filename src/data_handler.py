@@ -40,7 +40,9 @@ from src.lrmc import (
     complete_nula_covariance,
     complete_nula_covariance_from_covariance,
     complete_rowwise_nula_covariance,
+    compute_sample_covariance,
     covariance_to_autocorrelation_tensor,
+    ensure_hermitian,
 )
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -140,7 +142,12 @@ def build_subspacenet_input(
         rank = getattr(system_model_params, "lrmc_rank", None)
         if rank is None:
             rank = int(system_model_params.M) + 1
-        covariance = np.cov(np.asarray(X.cpu().numpy(), dtype=np.complex128))
+        # Use the explicit sample covariance path so ultra-low snapshot cases such
+        # as T=1 stay consistent with the hardened classical pipeline.
+        covariance = compute_sample_covariance(
+            np.asarray(X.cpu().numpy(), dtype=np.complex128)
+        )
+        covariance = ensure_hermitian(covariance)
         row_groups = getattr(system_model_params, "row_groups", None)
         ss_num_subarrays = getattr(system_model_params, "ss_num_subarrays", None)
         ss_row_subset = getattr(system_model_params, "ss_row_subset", None)
@@ -223,7 +230,9 @@ def build_subspacenet_input(
             raise AssertionError(
                 "build_subspacenet_input: completed covariance is numerically unstable"
             )
-        return covariance_to_autocorrelation_tensor(completed_covariance, tau)
+        return covariance_to_autocorrelation_tensor(
+            ensure_hermitian(completed_covariance), tau
+        )
     return create_autocorrelation_tensor(X, tau).to(torch.float)
 
 
