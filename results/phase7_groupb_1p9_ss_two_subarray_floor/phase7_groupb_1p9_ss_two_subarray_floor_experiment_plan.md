@@ -197,10 +197,10 @@ Running the planned launcher should produce:
 - per-method `metrics.json`
 
 Recommended results path:
-- `results/phase7_groupb_1p9_ss_two_subarray_floor/`
+- `results/phase7_groupb_1p9_ss_two_subarray_floor_phasea/`
 
 Recommended family markdown:
-- `phase7_groupb_1p9_ss_two_subarray_floor_results.md`
+- `phase7_groupb_1p9_ss_two_subarray_floor_phasea_results.md`
 
 ## Template / Label Requirements
 Every template should make the SS choice explicit in:
@@ -215,11 +215,11 @@ Recommended labels:
 - `SS(2/3: rows 1+2) -> LRMC`
 
 ## Canonical Launcher
-- `run_phase7_groupb_1p9_ss_two_subarray_floor.py`
+- `run_phase7_groupb_1p9_ss_two_subarray_floor_phasea.py`
 
 Recommended command:
 ```bash
-python run_phase7_groupb_1p9_ss_two_subarray_floor.py
+python run_phase7_groupb_1p9_ss_two_subarray_floor_phasea.py
 ```
 
 ## Follow-Up Decision
