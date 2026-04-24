@@ -192,6 +192,8 @@ After the geometry fixes and the coherent/non-coherent 2D studies, the project h
 - classical Group B is workable
 - `SS -> LRMC` is the main baseline path
 - coherent errors are typically around the low-single-degree range in the better classical runs
+- in the hardest tested coherent regime (`1 deg`, `1 dB`), classical performance remains poor even with `SS -> LRMC`, and additional snapshots help only modestly for the classical controls
+- in that same hard coherent regime, `SS -> LRMC -> SubspaceNet -> ESPRIT` improves strongly as snapshots increase and remains far better than the classical controls even at very low `T`
 - this regime is hard enough that learned methods can still matter
 
 ### Non-coherent Group B `1.9 lambda`
@@ -202,6 +204,7 @@ After the geometry fixes and the coherent/non-coherent 2D studies, the project h
 - in the non-coherent fixed-gap / SNR grid, angular separation is not the dominant failure axis once SNR is moderate; even `1 deg` becomes highly workable for classical MUSIC / Root-MUSIC / ESPRIT
 - unlike the coherent case, raw non-coherent MUSIC is already very strong at moderate SNR even without `SS -> LRMC`, while raw Root-MUSIC / ESPRIT still collapse and depend heavily on preprocessing
 - `SS -> LRMC` remains important in the non-coherent regime mainly because it rescues Root-MUSIC / ESPRIT and stabilizes the `1 deg`, low-SNR corner, not because non-coherent MUSIC uniformly requires it
+- in the hardest tested non-coherent regime (`1 deg`, `1 dB`), the classical pipeline also degrades badly at low snapshots, but `SS -> LRMC -> SubspaceNet -> ESPRIT` still stays clearly better and approaches sub-degree accuracy once snapshots become moderate
 - this regime is easier than the coherent one, but still useful for testing whether learned heads stabilize
 
 ## 6. Phase 4A: Large-Sample Coherent SubspaceNet on Group B 1.9 Lambda
@@ -484,12 +487,18 @@ Current repo style prefers:
 5. In coherent Group B, small angular separation is now the clearest failure axis. In the tested `T = 40`, `1 - 15 dB` regime, gap size matters much more than SNR, and the strongest classical degradation still occurs around `1 - 2 deg`.
 6. Coherent Group B therefore remains a meaningful learned target, especially in low-separation regimes where the classical `SS -> LRMC` pipeline is still imperfect.
 7. SubspaceNet-ESPRIT is currently the strongest learned path and produces its most meaningful gains exactly in the hard coherent low-separation cells, where it reduces multi-degree classical errors to sub-degree RMSE.
-8. In non-coherent Group B, the fixed-gap / SNR grid confirms that this regime is much easier than the coherent one: once SNR is moderate, classical MUSIC / Root-MUSIC / ESPRIT with `SS -> LRMC` remain very strong even at `1 deg`.
-9. The non-coherent Phase 6 results also show an important method split without preprocessing: raw MUSIC can already be excellent at moderate SNR, whereas raw Root-MUSIC / ESPRIT still fail badly; in the non-coherent regime, `SS -> LRMC` is therefore most important for subspace-method rescue and low-SNR robustness rather than for making every classical method viable.
-10. In the non-coherent regime, SubspaceNet-ESPRIT is still strongest in the hardest `1 deg`, low-SNR cells, but it is no longer uniformly better than the best classical preprocessed method once the task becomes easy; this means the main remaining learned value is in hard-edge robustness rather than broad average dominance.
-11. Root-MUSIC remains the most fragile component in both classical and learned forms and should still be treated as experimental unless it is the explicit object of study.
-12. The experiment framework is now mature enough that future work should be targeted:
+8. The hard-regime snapshot breakdown at fixed `1 deg`, `1 dB` shows that for both coherent and non-coherent signals, lowering snapshots hurts `SS -> LRMC -> SubspaceNet -> ESPRIT` much less than it hurts the classical controls; the learned pipeline keeps a large advantage even at `T = 1..4` and becomes especially strong again by `T = 16..25`.
+9. That same snapshot breakdown sharpens the coherent interpretation: in the hardest coherent cell, the main classical bottleneck is not simply lack of snapshots, because even at `T = 25` the classical `SS -> LRMC` controls remain very poor, while the learned model improves rapidly with additional `T`.
+10. In non-coherent Group B, the fixed-gap / SNR grid confirms that this regime is much easier than the coherent one: once SNR is moderate, classical MUSIC / Root-MUSIC / ESPRIT with `SS -> LRMC` remain very strong even at `1 deg`.
+11. The non-coherent Phase 6 results also show an important method split without preprocessing: raw MUSIC can already be excellent at moderate SNR, whereas raw Root-MUSIC / ESPRIT still fail badly; in the non-coherent regime, `SS -> LRMC` is therefore most important for subspace-method rescue and low-SNR robustness rather than for making every classical method viable.
+12. In the non-coherent regime, SubspaceNet-ESPRIT is still strongest in the hardest `1 deg`, low-SNR cells, but it is no longer uniformly better than the best classical preprocessed method once the task becomes easy; this means the main remaining learned value is in hard-edge robustness rather than broad average dominance.
+13. The Phase 7A two-subarray screening shows that reducing spatial smoothing from `3-of-3` row blocks to `2-of-3` is not a single scalar weakening; which row pair is chosen matters a lot in coherent hard cells. The contiguous `rows 0+1` variant can outperform the full `3-of-3` baseline in the hardest coherent cells, while the skip-middle `rows 0+2` and `rows 1+2` choices are usually worse there.
+14. In easier or non-coherent cells, the difference between `3-of-3` and `2-of-3` spatial smoothing becomes much smaller. This means the spatial-smoothing floor is mainly a hard coherent boundary issue rather than a universal requirement of the Group B pipeline.
+15. The Phase 7A result also means reduced-SS variants should not be treated as pure "less smoothing" controls. Row-pair geometry matters enough that future reduced-SS studies should preserve pair identity explicitly rather than collapsing all `2-of-3` choices into one bucket.
+16. Root-MUSIC remains the most fragile component in both classical and learned forms and should still be treated as experimental unless it is the explicit object of study.
+17. The experiment framework is now mature enough that future work should be targeted:
    - coherent low-separation Group B, especially `1 - 2 deg`
    - combined hard regimes such as low-separation plus low-snapshot
    - focused SubspaceNet-ESPRIT improvements in the hard coherent cells
    - preprocessing ablations that distinguish when non-coherent MUSIC can skip `SS -> LRMC` versus when Root-MUSIC / ESPRIT still require it
+   - reduced-SS follow-up centered on the best coherent `2-of-3` row pair rather than treating all two-subarray variants as equivalent
