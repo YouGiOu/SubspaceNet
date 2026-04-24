@@ -45,7 +45,13 @@ from sklearn.model_selection import train_test_split
 from src.utils import *
 from src.criterions import *
 from src.system_model import SystemModel, SystemModelParams
-from src.models import SubspaceNet, DeepCNN, DeepAugmentedMUSIC, ModelGenerator
+from src.models import (
+    DeepAugmentedMUSIC,
+    DeepCNN,
+    ModelGenerator,
+    SubspaceNet,
+    SubspaceNetSSFusionEspritPhase1p1,
+)
 from src.evaluation import evaluate_dnn_model
 from src.data_handler import get_experiment_suffix
 
@@ -197,6 +203,23 @@ class TrainingParams(object):
                 )
             elif self.model_type.startswith("DeepCNN"):
                 model = DeepCNN(N=system_model.params.N, grid_size=361)
+            elif self.model_type.startswith("SubspaceNetSSFusionEspritPhase1p1"):
+                if not isinstance(tau, int):
+                    raise ValueError(
+                        "TrainingParams.set_model: tau parameter must be provided for SubspaceNet model"
+                    )
+                self.tau = tau
+                self.diff_method = "esprit"
+                model = SubspaceNetSSFusionEspritPhase1p1(
+                    tau=tau,
+                    M=system_model.params.M,
+                    fusion_hidden_channels=int(
+                        getattr(system_model.params, "ss_fusion_hidden_channels", 16)
+                    ),
+                    fusion_diagonal_loading=float(
+                        getattr(system_model.params, "ss_fusion_diagonal_loading", 1e-6)
+                    ),
+                )
             elif self.model_type.startswith("SubspaceNet"):
                 if not isinstance(tau, int):
                     raise ValueError(

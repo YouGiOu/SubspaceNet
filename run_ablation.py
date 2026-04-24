@@ -397,9 +397,12 @@ def run_traditional_method(
     }
 
 
-def evaluate_subspacenet_rmse_deg(model, test_dataset: List) -> float:
+def evaluate_subspacenet_rmse_deg(model, test_dataset: List):
     model.eval()
     errors = []
+    fusion_norms = []
+    fusion_diag_means = []
+    branch_norms = []
     with torch.no_grad():
         for X, doa in test_dataset:
             inputs = X.unsqueeze(0).to(next(model.parameters()).device)
@@ -407,7 +410,22 @@ def evaluate_subspacenet_rmse_deg(model, test_dataset: List) -> float:
             targets_deg = np.asarray(doa) * R2D
             predictions_deg = np.asarray(predictions_rad) * R2D
             errors.append(periodic_rmse_deg(predictions_deg, targets_deg))
-    return float(np.mean(errors))
+            diagnostics = getattr(model, "last_fusion_diagnostics", None)
+            if diagnostics is not None:
+                if diagnostics.get("fused_covariance_norm") is not None:
+                    fusion_norms.append(float(diagnostics["fused_covariance_norm"]))
+                if diagnostics.get("fused_diagonal_mean_real") is not None:
+                    fusion_diag_means.append(float(diagnostics["fused_diagonal_mean_real"]))
+                if diagnostics.get("input_branch_norms") is not None:
+                    branch_norms.append(list(diagnostics["input_branch_norms"]))
+    summary = {}
+    if fusion_norms:
+        summary["avg_fused_covariance_norm"] = float(np.mean(fusion_norms))
+    if fusion_diag_means:
+        summary["avg_fused_diagonal_mean_real"] = float(np.mean(fusion_diag_means))
+    if branch_norms:
+        summary["avg_input_branch_norms"] = np.mean(np.asarray(branch_norms, dtype=float), axis=0).tolist()
+    return float(np.mean(errors)), summary
 
 
 def train_subspacenet_variant(
@@ -430,7 +448,7 @@ def train_subspacenet_variant(
     train_dataset, test_dataset, _, _, _ = prepare_datasets(
         repo_root=repo_root,
         template=template,
-        model_type="SubspaceNet",
+        model_type=model_settings["model_type"],
         tau=tau,
         need_training_split=True,
     )
@@ -480,7 +498,7 @@ def train_subspacenet_variant(
         saving_path=checkpoint_dir,
     )
     plot_loss_curves(train_loss, valid_loss, result_dir / "loss_curve.png")
-    rmse_deg = evaluate_subspacenet_rmse_deg(model, test_dataset)
+    rmse_deg, model_eval_summary = evaluate_subspacenet_rmse_deg(model, test_dataset)
     save_json(
         result_dir / "metrics.json",
         {
@@ -492,6 +510,7 @@ def train_subspacenet_variant(
             "train_loss": train_loss,
             "valid_loss": valid_loss,
             "checkpoint_dir": str(checkpoint_dir),
+            **model_eval_summary,
         },
     )
     return {"scheme": template["template_name"], "method": method_name, "rmse_deg": rmse_deg}

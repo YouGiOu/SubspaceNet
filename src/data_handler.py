@@ -44,6 +44,7 @@ from src.lrmc import (
     covariance_to_autocorrelation_tensor,
     ensure_hermitian,
 )
+from src.ss_fusion_phase1p1 import build_ss_fusion_phase1p1_input
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -130,8 +131,12 @@ def build_subspacenet_input(
     X: torch.Tensor,
     system_model_params: SystemModelParams,
     tau: int,
+    model_type: str = "SubspaceNet",
 ):
     """Builds the SubspaceNet input tensor for either ULA or NULA+LRMC paths."""
+    if model_type.startswith("SubspaceNetSSFusionEspritPhase1p1"):
+        return build_ss_fusion_phase1p1_input(X=X, system_model_params=system_model_params)
+
     if getattr(system_model_params, "use_lrmc", False):
         sensor_positions = getattr(system_model_params, "sensor_positions", None)
         virtual_size = getattr(system_model_params, "virtual_array_size", None)
@@ -329,6 +334,7 @@ def create_dataset(
                     X=X,
                     system_model_params=system_model_params,
                     tau=tau,
+                    model_type=model_type,
                 )
             elif model_type.startswith("DeepCNN") and phase.startswith("test"):
                 # Generate 3d covariance parameters tensor

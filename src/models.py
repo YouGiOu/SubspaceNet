@@ -42,6 +42,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 import warnings
+from src.ss_fusion_phase1p1 import covariance_batch_to_autocorrelation_tensor_phase1p1
 from src.utils import gram_diagonal_overload, device
 from src.utils import sum_of_diags_torch, find_roots_torch
 
@@ -147,6 +148,17 @@ class ModelGenerator(object):
             )
         elif self.model_type.startswith("DeepCNN"):
             self.model = DeepCNN(N=system_model_params.N, grid_size=361)
+        elif self.model_type.startswith("SubspaceNetSSFusionEspritPhase1p1"):
+            self.model = SubspaceNetSSFusionEspritPhase1p1(
+                tau=self.tau,
+                M=system_model_params.M,
+                fusion_hidden_channels=int(
+                    getattr(system_model_params, "ss_fusion_hidden_channels", 16)
+                ),
+                fusion_diagonal_loading=float(
+                    getattr(system_model_params, "ss_fusion_diagonal_loading", 1e-6)
+                ),
+            )
         elif self.model_type.startswith("SubspaceNet"):
             self.model = SubspaceNet(
                 tau=self.tau, M=system_model_params.M, diff_method=self.diff_method
@@ -468,6 +480,83 @@ class SubspaceNetEsprit(SubspaceNet):
         # Feed surrogate covariance to Esprit algorithm
         doa_prediction = esprit(Rz, self.M, self.batch_size)
         return doa_prediction, Rz
+
+
+class SubspaceNetSSFusionEspritPhase1p1(SubspaceNet):
+    """Phase 1.1 learned fusion wrapper over the existing SubspaceNet-ESPRIT path."""
+
+    def __init__(
+        self,
+        tau: int,
+        M: int,
+        fusion_hidden_channels: int = 16,
+        fusion_diagonal_loading: float = 1e-6,
+    ):
+        super().__init__(tau=tau, M=M, diff_method="esprit")
+        hidden = int(max(4, fusion_hidden_channels))
+        self.fusion_hidden_channels = hidden
+        self.fusion_diagonal_loading = float(max(0.0, fusion_diagonal_loading))
+        self.fusion_block = nn.Sequential(
+            nn.Conv2d(6, hidden, kernel_size=3, padding=1),
+            nn.ReLU(),
+            nn.Conv2d(hidden, hidden, kernel_size=3, padding=1),
+            nn.ReLU(),
+            nn.Conv2d(hidden, 2, kernel_size=1),
+        )
+        self.last_fusion_diagnostics = None
+
+    def _project_fused_covariance(self, fused_real: torch.Tensor, fused_imag: torch.Tensor):
+        fused_covariance = torch.complex(fused_real, fused_imag)
+        fused_covariance = 0.5 * (
+            fused_covariance + torch.conj(fused_covariance.transpose(-1, -2))
+        )
+        if self.fusion_diagonal_loading > 0:
+            size = fused_covariance.shape[-1]
+            eye = torch.eye(size, device=fused_covariance.device, dtype=fused_covariance.dtype)
+            fused_covariance = fused_covariance + self.fusion_diagonal_loading * eye.unsqueeze(0)
+        if not torch.isfinite(fused_covariance.real).all() or not torch.isfinite(
+            fused_covariance.imag
+        ).all():
+            raise AssertionError(
+                "SubspaceNetSSFusionEspritPhase1p1: fused covariance contains non-finite values"
+            )
+        return fused_covariance
+
+    def forward(self, fusion_input: torch.Tensor):
+        if fusion_input.ndim != 4 or fusion_input.shape[1] != 6:
+            raise ValueError(
+                "SubspaceNetSSFusionEspritPhase1p1.forward: expected input with shape [batch, 6, N, N]"
+            )
+        fused = self.fusion_block(fusion_input)
+        fused_real = fused[:, 0, :, :]
+        fused_imag = fused[:, 1, :, :]
+        fused_covariance = self._project_fused_covariance(fused_real, fused_imag)
+        self.last_fusion_diagnostics = {
+            "input_branch_norms": [
+                float(
+                    torch.linalg.norm(fusion_input[:, start : start + 2, :, :])
+                    .detach()
+                    .cpu()
+                    .item()
+                )
+                for start in (0, 2, 4)
+            ],
+            "fused_covariance_norm": float(
+                torch.linalg.norm(fused_covariance).detach().cpu().item()
+            ),
+            "fused_diagonal_mean_real": float(
+                torch.real(torch.diagonal(fused_covariance, dim1=-2, dim2=-1))
+                .mean()
+                .detach()
+                .cpu()
+                .item()
+            ),
+        }
+        rx_tau = covariance_batch_to_autocorrelation_tensor_phase1p1(
+            covariance_batch=fused_covariance,
+            tau=self.tau,
+        )
+        return super().forward(rx_tau)
 
 
 class DeepAugmentedMUSIC(nn.Module):
