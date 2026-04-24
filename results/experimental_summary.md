@@ -194,6 +194,7 @@ After the geometry fixes and the coherent/non-coherent 2D studies, the project h
 - coherent errors are typically around the low-single-degree range in the better classical runs
 - in the hardest tested coherent regime (`1 deg`, `1 dB`), classical performance remains poor even with `SS -> LRMC`, and additional snapshots help only modestly for the classical controls
 - in that same hard coherent regime, `SS -> LRMC -> SubspaceNet -> ESPRIT` improves strongly as snapshots increase and remains far better than the classical controls even at very low `T`
+- in Phase 7B Phase 1.1, a first learned SS-fusion model that fuses the three `SS(2/3)` LRMC branches slightly beat both the current `SS(3/3)` learned baseline and the best fixed `SS(2/3: rows 0+1)` learned baseline in the primary hard coherent cell
 - this regime is hard enough that learned methods can still matter
 
 ### Non-coherent Group B `1.9 lambda`
@@ -407,6 +408,11 @@ At the moment, the main practical learned target is:
 - `1.9 lambda`
 - SubspaceNet-ESPRIT
 
+The current most promising architectural extension beyond the standard learned target is now:
+- learned SS-fusion on top of the Group B `SS(2/3)` LRMC branch family
+
+The first hard-cell result is encouraging, but it should still be treated as an early targeted success rather than a fully validated replacement for the standard pipeline.
+
 ### Current paper-scale training configuration
 
 The large-sample runs use:
@@ -495,10 +501,13 @@ Current repo style prefers:
 13. The Phase 7A two-subarray screening shows that reducing spatial smoothing from `3-of-3` row blocks to `2-of-3` is not a single scalar weakening; which row pair is chosen matters a lot in coherent hard cells. The contiguous `rows 0+1` variant can outperform the full `3-of-3` baseline in the hardest coherent cells, while the skip-middle `rows 0+2` and `rows 1+2` choices are usually worse there.
 14. In easier or non-coherent cells, the difference between `3-of-3` and `2-of-3` spatial smoothing becomes much smaller. This means the spatial-smoothing floor is mainly a hard coherent boundary issue rather than a universal requirement of the Group B pipeline.
 15. The Phase 7A result also means reduced-SS variants should not be treated as pure "less smoothing" controls. Row-pair geometry matters enough that future reduced-SS studies should preserve pair identity explicitly rather than collapsing all `2-of-3` choices into one bucket.
-16. Root-MUSIC remains the most fragile component in both classical and learned forms and should still be treated as experimental unless it is the explicit object of study.
-17. The experiment framework is now mature enough that future work should be targeted:
+16. Phase 7B Phase 1.1 provides the first positive evidence that the reduced-SS branch diversity can be exploited by a learned model rather than only by fixed branch selection. In the primary hard coherent cell (`1 deg`, `1 dB`, `T = 40`), the learned SS-fusion model achieved about `0.4516 deg`, slightly better than the current `SS(3/3)` learned baseline at about `0.4747 deg` and clearly better than the best fixed `SS(2/3: rows 0+1)` learned baseline at about `0.6995 deg`.
+17. This Phase 7B Phase 1.1 result is encouraging because it suggests the branch differences found in Phase 7A are not just a classical preprocessing curiosity; they contain learnable information that can improve the hardest coherent learned target. At the same time, the gain over the standard `SS(3/3)` learned baseline is still modest, so the learned-fusion path should currently be treated as promising but not yet fully validated.
+18. Root-MUSIC remains the most fragile component in both classical and learned forms and should still be treated as experimental unless it is the explicit object of study.
+19. The experiment framework is now mature enough that future work should be targeted:
    - coherent low-separation Group B, especially `1 - 2 deg`
    - combined hard regimes such as low-separation plus low-snapshot
    - focused SubspaceNet-ESPRIT improvements in the hard coherent cells
    - preprocessing ablations that distinguish when non-coherent MUSIC can skip `SS -> LRMC` versus when Root-MUSIC / ESPRIT still require it
    - reduced-SS follow-up centered on the best coherent `2-of-3` row pair rather than treating all two-subarray variants as equivalent
+   - learned SS-fusion follow-up that checks whether the Phase `1.1` gain persists across the next coherent hard cells before treating it as a new default

@@ -134,6 +134,8 @@ def build_subspacenet_input(
     model_type: str = "SubspaceNet",
 ):
     """Builds the SubspaceNet input tensor for either ULA or NULA+LRMC paths."""
+    if model_type.startswith("SubspaceNetSSFusionEspritPhase1p1p1"):
+        return build_ss_fusion_phase1p1_input(X=X, system_model_params=system_model_params)
     if model_type.startswith("SubspaceNetSSFusionEspritPhase1p1"):
         return build_ss_fusion_phase1p1_input(X=X, system_model_params=system_model_params)
 

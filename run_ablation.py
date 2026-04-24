@@ -425,6 +425,10 @@ def evaluate_subspacenet_rmse_deg(model, test_dataset: List):
         summary["avg_fused_diagonal_mean_real"] = float(np.mean(fusion_diag_means))
     if branch_norms:
         summary["avg_input_branch_norms"] = np.mean(np.asarray(branch_norms, dtype=float), axis=0).tolist()
+    if getattr(model, "last_fusion_diagnostics", None) is not None:
+        kernel_type = model.last_fusion_diagnostics.get("fusion_kernel_type")
+        if kernel_type:
+            summary["fusion_kernel_type"] = kernel_type
     return float(np.mean(errors)), summary
 
 

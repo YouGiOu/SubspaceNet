@@ -148,6 +148,17 @@ class ModelGenerator(object):
             )
         elif self.model_type.startswith("DeepCNN"):
             self.model = DeepCNN(N=system_model_params.N, grid_size=361)
+        elif self.model_type.startswith("SubspaceNetSSFusionEspritPhase1p1p1"):
+            self.model = SubspaceNetSSFusionEspritPhase1p1p1(
+                tau=self.tau,
+                M=system_model_params.M,
+                fusion_hidden_channels=int(
+                    getattr(system_model_params, "ss_fusion_hidden_channels", 16)
+                ),
+                fusion_diagonal_loading=float(
+                    getattr(system_model_params, "ss_fusion_diagonal_loading", 1e-6)
+                ),
+            )
         elif self.model_type.startswith("SubspaceNetSSFusionEspritPhase1p1"):
             self.model = SubspaceNetSSFusionEspritPhase1p1(
                 tau=self.tau,
@@ -485,6 +496,8 @@ class SubspaceNetEsprit(SubspaceNet):
 class SubspaceNetSSFusionEspritPhase1p1(SubspaceNet):
     """Phase 1.1 learned fusion wrapper over the existing SubspaceNet-ESPRIT path."""
 
+    fusion_kernel_type = "3x3_spatial"
+
     def __init__(
         self,
         tau: int,
@@ -496,14 +509,17 @@ class SubspaceNetSSFusionEspritPhase1p1(SubspaceNet):
         hidden = int(max(4, fusion_hidden_channels))
         self.fusion_hidden_channels = hidden
         self.fusion_diagonal_loading = float(max(0.0, fusion_diagonal_loading))
-        self.fusion_block = nn.Sequential(
+        self.fusion_block = self._build_fusion_block(hidden)
+        self.last_fusion_diagnostics = None
+
+    def _build_fusion_block(self, hidden: int):
+        return nn.Sequential(
             nn.Conv2d(6, hidden, kernel_size=3, padding=1),
             nn.ReLU(),
             nn.Conv2d(hidden, hidden, kernel_size=3, padding=1),
             nn.ReLU(),
             nn.Conv2d(hidden, 2, kernel_size=1),
         )
-        self.last_fusion_diagnostics = None
 
     def _project_fused_covariance(self, fused_real: torch.Tensor, fused_imag: torch.Tensor):
         fused_covariance = torch.complex(fused_real, fused_imag)
@@ -551,12 +567,28 @@ class SubspaceNetSSFusionEspritPhase1p1(SubspaceNet):
                 .cpu()
                 .item()
             ),
+            "fusion_kernel_type": self.fusion_kernel_type,
         }
         rx_tau = covariance_batch_to_autocorrelation_tensor_phase1p1(
             covariance_batch=fused_covariance,
             tau=self.tau,
         )
         return super().forward(rx_tau)
+
+
+class SubspaceNetSSFusionEspritPhase1p1p1(SubspaceNetSSFusionEspritPhase1p1):
+    """Phase 1.1.1 1x1 channel-only learned fusion variant."""
+
+    fusion_kernel_type = "1x1_channel_only"
+
+    def _build_fusion_block(self, hidden: int):
+        return nn.Sequential(
+            nn.Conv2d(6, hidden, kernel_size=1),
+            nn.ReLU(),
+            nn.Conv2d(hidden, hidden, kernel_size=1),
+            nn.ReLU(),
+            nn.Conv2d(hidden, 2, kernel_size=1),
+        )
 
 
 class DeepAugmentedMUSIC(nn.Module):
