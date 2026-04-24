@@ -31,7 +31,7 @@ CONFIG = {
     "scan_min": -15.0,
     "scan_max": 15.0,
     "scan_resolution": 0.05,
-    "output_dir": "results/angular_spectra",
+    "output_dir": "../angular_spectra",
     "output_format": "png",
     "figure_title": None,
     "peak_markers": True,

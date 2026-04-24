@@ -17,6 +17,9 @@ STAGE_A_CELLS = [
     (5, 10),
 ]
 
+PHASE_A_TOTAL_SAMPLES = 10000
+PHASE_A_TEST_SAMPLES = 2000
+
 SIGNAL_REGIMES = [
     ("coherent", "coh"),
     ("non-coherent", "noncoh"),
@@ -60,7 +63,7 @@ def build_experiments() -> list[str]:
         for gap, snr in STAGE_A_CELLS:
             for variant in SS_VARIANTS:
                 experiments.append(
-                    f"phase7_gb19_{signal_key}_g{gap}_s{snr}_{variant['key']}"
+                    f"phase7_gb19_{signal_key}_g{gap}_s{snr}_{variant['key']}_phasea"
                 )
     return experiments
 
@@ -78,12 +81,12 @@ def parse_args():
     parser.add_argument("--seed", type=int, default=42, help="Shared random seed.")
     parser.add_argument(
         "--results-dir",
-        default="results/phase7_groupb_1p9_ss_two_subarray_floor",
+        default="results/phase7_groupb_1p9_ss_two_subarray_floor_phasea",
         help="Dedicated output directory for the Phase 7A screening study.",
     )
     parser.add_argument(
         "--templates-dir",
-        default="data/dataset_templates/ablation/phase7_groupb_1p9_ss_two_subarray_floor",
+        default="data/dataset_templates/ablation/phase7_groupb_1p9_ss_two_subarray_floor_phasea",
         help="Generated template directory for the Phase 7A screening study.",
     )
     return parser.parse_args()
@@ -124,7 +127,7 @@ def ensure_phase7_templates(repo_root: Path, generated_templates_dir: Path):
             for variant in SS_VARIANTS:
                 template = json.loads(json.dumps(source_template))
                 template_name = (
-                    f"phase7_gb19_{signal_key}_g{gap}_s{snr}_{variant['key']}"
+                    f"phase7_gb19_{signal_key}_g{gap}_s{snr}_{variant['key']}_phasea"
                 )
                 target_name = f"{template_name}.json"
 
@@ -140,7 +143,11 @@ def ensure_phase7_templates(repo_root: Path, generated_templates_dir: Path):
                 template["commands"]["TRAIN_MODEL"] = False
                 template["commands"]["EVALUATE_MODE"] = True
                 template["scenario_data_path"] = (
-                    f"p7_ssfloor_{signal_key}_g{gap}_s{snr}_45k"
+                    f"p7a_ssfloor_{signal_key}_g{gap}_s{snr}_10k"
+                )
+                template["dataset"]["samples_size"] = PHASE_A_TOTAL_SAMPLES
+                template["dataset"]["train_test_ratio"] = (
+                    PHASE_A_TEST_SAMPLES / PHASE_A_TOTAL_SAMPLES
                 )
 
                 system_model = template["system_model"]
@@ -152,7 +159,7 @@ def ensure_phase7_templates(repo_root: Path, generated_templates_dir: Path):
 
                 report = template["report"]
                 report["markdown_output"] = (
-                    "phase7_groupb_1p9_ss_two_subarray_floor_results.md"
+                    "phase7_groupb_1p9_ss_two_subarray_floor_phasea_results.md"
                 )
                 report["markdown_title"] = (
                     "Phase 7A - Group B 1.9 Lambda Two-Subarray Spatial Smoothing Floor Screening"
@@ -174,7 +181,7 @@ def ensure_phase7_templates(repo_root: Path, generated_templates_dir: Path):
                     "Preprocessing family: rowwise SS -> LRMC",
                     "SS variants: full 3/3 baseline and all three 2/3 row-pair choices",
                     "Control methods: DBF, MUSIC, Root-MUSIC, ESPRIT",
-                    "Dataset size per cell: 45,000 samples",
+                    "Dataset size per cell: 10,000 samples total with 2,000 test samples",
                     "Metric: horizontal-angle RMSE in degrees (periodic matching)",
                 ]
                 report["write_summary_csv"] = True
