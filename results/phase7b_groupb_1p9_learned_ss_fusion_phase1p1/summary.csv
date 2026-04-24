@@ -1,0 +1,4 @@
+scheme,method,rmse_deg,avg_runtime_sec,avg_lrmc_runtime_sec,avg_lrmc_iterations,lrmc_convergence_rate,avg_lrmc_final_residual,min_lrmc_eigenvalue,min_lrmc_singular_value
+phase7b_gb19_coh_g1_s1_ss33_subspacenet_phase1p1,esprit,0.4746880020596855,,,,,,,
+phase7b_gb19_coh_g1_s1_ss23_r01_subspacenet_phase1p1,esprit,0.6995406238272728,,,,,,,
+phase7b_gb19_coh_g1_s1_ssfusion_subspacenet_phase1p1,esprit,0.45156830377150375,,,,,,,
