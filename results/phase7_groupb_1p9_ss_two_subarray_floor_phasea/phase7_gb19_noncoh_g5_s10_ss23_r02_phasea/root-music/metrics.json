@@ -1,0 +1,13 @@
+{
+  "template_name": "phase7_gb19_noncoh_g5_s10_ss23_r02_phasea",
+  "method_name": "root-music",
+  "rmse_deg": 0.10988068443866959,
+  "avg_runtime_sec": 0.00457356805006566,
+  "avg_lrmc_runtime_sec": 0.003987686600070447,
+  "avg_lrmc_iterations": 98.6935,
+  "lrmc_convergence_rate": 0.117,
+  "avg_lrmc_final_residual": 0.0,
+  "min_lrmc_eigenvalue": 1e-08,
+  "min_lrmc_singular_value": 9.999792921188042e-09,
+  "num_test_samples": 2000
+}

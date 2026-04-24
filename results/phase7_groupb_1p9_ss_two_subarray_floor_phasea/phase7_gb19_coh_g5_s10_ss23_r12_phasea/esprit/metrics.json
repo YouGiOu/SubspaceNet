@@ -1,0 +1,13 @@
+{
+  "template_name": "phase7_gb19_coh_g5_s10_ss23_r12_phasea",
+  "method_name": "esprit",
+  "rmse_deg": 1.6087097118658962,
+  "avg_runtime_sec": 0.004238035500100523,
+  "avg_lrmc_runtime_sec": 0.0037884009500266983,
+  "avg_lrmc_iterations": 94.319,
+  "lrmc_convergence_rate": 0.2145,
+  "avg_lrmc_final_residual": 0.0,
+  "min_lrmc_eigenvalue": 1e-08,
+  "min_lrmc_singular_value": 9.999752430644931e-09,
+  "num_test_samples": 2000
+}

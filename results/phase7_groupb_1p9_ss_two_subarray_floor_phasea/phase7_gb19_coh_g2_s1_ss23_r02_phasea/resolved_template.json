@@ -157,5 +157,5 @@
     "markdown_scheme_label": "Coherent | Gap = 2 deg | SNR = 1 dB | SS(2/3: rows 0+2) -> LRMC"
   },
   "template_name": "phase7_gb19_coh_g2_s1_ss23_r02_phasea",
-  "template_path": "F:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase7_groupb_1p9_ss_two_subarray_floor_phasea\\phase7_gb19_coh_g2_s1_ss23_r02_phasea.json"
+  "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase7_groupb_1p9_ss_two_subarray_floor_phasea\\phase7_gb19_coh_g2_s1_ss23_r02_phasea.json"
 }

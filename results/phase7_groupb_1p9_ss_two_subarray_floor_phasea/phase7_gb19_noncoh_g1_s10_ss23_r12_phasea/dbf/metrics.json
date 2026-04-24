@@ -1,0 +1,13 @@
+{
+  "template_name": "phase7_gb19_noncoh_g1_s10_ss23_r12_phasea",
+  "method_name": "dbf",
+  "rmse_deg": 5.237471815218679,
+  "avg_runtime_sec": 0.0234029242499455,
+  "avg_lrmc_runtime_sec": 0.003916607550119806,
+  "avg_lrmc_iterations": 97.463,
+  "lrmc_convergence_rate": 0.12,
+  "avg_lrmc_final_residual": 0.0,
+  "min_lrmc_eigenvalue": 1e-08,
+  "min_lrmc_singular_value": 9.999833452528022e-09,
+  "num_test_samples": 2000
+}
