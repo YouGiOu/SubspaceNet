@@ -1,0 +1,5 @@
+scheme,method,rmse_deg,avg_runtime_sec,avg_lrmc_runtime_sec,avg_lrmc_iterations,lrmc_convergence_rate,avg_lrmc_final_residual,min_lrmc_eigenvalue,min_lrmc_singular_value
+phase7c_gb19_coh_g1_s1_ss33_backbone3x3,esprit,0.4087025779819007,,,,,,,
+phase7c_gb19_coh_g1_s1_ss23_r01_backbone3x3,esprit,0.5385864253140383,,,,,,,
+phase7c_gb19_coh_g1_s1_ssfusion_spatial_backbone3x3,esprit,0.4117525987400326,,,,,,,
+phase7c_gb19_coh_g1_s1_ssfusion_1x1_backbone3x3,esprit,0.4395735584579191,,,,,,,

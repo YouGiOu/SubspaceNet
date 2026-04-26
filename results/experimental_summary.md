@@ -412,12 +412,20 @@ At the moment, the main practical learned target is:
 The current most promising architectural extension beyond the standard learned target is now:
 - learned SS-fusion on top of the Group B `SS(2/3)` LRMC branch family
 
-The first hard-cell results are encouraging, but they should still be treated as early targeted successes rather than a fully validated replacement for the standard pipeline.
+The first hard-cell fusion results are encouraging, but they should still be treated as early targeted successes rather than a fully validated replacement for the standard pipeline.
 
 Current interpretation of the learned SS-fusion variants:
 - spatial-fusion Phase `1.1` is the strongest result so far in the primary hard coherent cell
 - `1x1` channel-only fusion Phase `1.1.1` still improves over the two fixed learned baselines, which suggests adaptive branch fusion itself is useful
 - however, the current `1x1` restriction loses some of the gain seen in the spatial-fusion model, so channel-only fusion should presently be treated as a useful structural ablation rather than the new preferred learned-fusion default
+
+Current interpretation after the Phase 7C backbone ablation:
+- enlarging the SubspaceNet backbone kernel from `2x2` to `3x3` improved every tested learned variant in the primary coherent hard cell
+- the biggest absolute gain was on the weaker fixed baseline `SS(2/3: rows 0+1)`, which improved from about `0.6995 deg` to about `0.5386 deg`
+- the standard `SS(3/3) -> LRMC -> SubspaceNet -> ESPRIT` path improved from about `0.4747 deg` to about `0.4087 deg`
+- the spatial learned-fusion path also improved from about `0.4516 deg` to about `0.4118 deg`, but after the backbone change it no longer clearly beats the plain `SS(3/3)` baseline
+- in this hard cell, the current best single result is therefore the plain `SS(3/3)` learned baseline with the `3x3` backbone, while the spatial-fusion `3x3` model remains a very close second
+- current working interpretation: local receptive-field size inside the SubspaceNet backbone matters enough that some of the earlier apparent fusion advantage was at least partly backbone-limited
 
 ### Current paper-scale training configuration
 
@@ -436,6 +444,98 @@ The repo already includes:
 - non-blocking GPU transfers
 - `optimizer.zero_grad(set_to_none=True)`
 - dataset cache reuse in `run_ablation.py`
+
+### Current SubspaceNet backbone definitions for paper diagrams
+
+For the current Group B `1.9 lambda` learned runs, the SubspaceNet backbone takes the LRMC-completed virtual covariance and converts it into a `tau`-slice real/imaginary tensor with shape:
+- input to the backbone: `[B, tau, 2N_v, N_v]`
+- in the current paper-scale Group B setup:
+  - `tau = 8`
+  - `N_v = 9`
+  - so the actual input tensor is `[B, 8, 18, 9]`
+
+Shared structure of both backbone variants:
+- three encoder convolutions
+- after each convolution, an anti-rectifier block concatenates `ReLU(x)` and `ReLU(-x)`, which doubles the channel count
+- two decoder transposed convolutions, each again followed by anti-rectification
+- one dropout layer with rate `0.2`
+- one final transposed convolution to reconstruct a single-channel tensor
+- no pooling
+- no batch normalization
+- no padding and stride `1` throughout
+
+Shared channel flow:
+- input: `tau`
+- `conv1`: `tau -> 16`
+- anti-rectifier: `16 -> 32`
+- `conv2`: `32 -> 32`
+- anti-rectifier: `32 -> 64`
+- `conv3`: `64 -> 64`
+- anti-rectifier: `64 -> 128`
+- `deconv2`: `128 -> 32`
+- anti-rectifier: `32 -> 64`
+- `deconv3`: `64 -> 16`
+- anti-rectifier: `16 -> 32`
+- dropout: `32 -> 32`
+- `deconv4`: `32 -> 1`
+
+After the final reconstruction:
+- output tensor shape is `[B, 1, 2N_v, N_v]`
+- it is reshaped to `[B, 2N_v, N_v]`
+- the first `N_v` rows are interpreted as the real part and the last `N_v` rows as the imaginary part
+- these are combined into a complex surrogate covariance `Rz` with shape `[B, N_v, N_v]`
+- `Rz` is then passed to the differentiable subspace head, which is ESPRIT in the current preferred learned path
+
+#### `2x2` backbone
+
+This is the default historical backbone used by the main SubspaceNet and Phase 7B learned-fusion baselines.
+
+Layer-by-layer shape flow in the current Group B setup (`[B, 8, 18, 9]` input):
+- input: `[B, 8, 18, 9]`
+- `conv1(k=2)`: `[B, 16, 17, 8]`
+- anti-rectifier: `[B, 32, 17, 8]`
+- `conv2(k=2)`: `[B, 32, 16, 7]`
+- anti-rectifier: `[B, 64, 16, 7]`
+- `conv3(k=2)`: `[B, 64, 15, 6]`
+- anti-rectifier: `[B, 128, 15, 6]`
+- `deconv2(k=2)`: `[B, 32, 16, 7]`
+- anti-rectifier: `[B, 64, 16, 7]`
+- `deconv3(k=2)`: `[B, 16, 17, 8]`
+- anti-rectifier: `[B, 32, 17, 8]`
+- dropout: `[B, 32, 17, 8]`
+- `deconv4(k=2)`: `[B, 1, 18, 9]`
+- reshape / split real-imag: `[B, 18, 9] -> [B, 9, 9] + [B, 9, 9] -> Rz [B, 9, 9]`
+
+Interpretation:
+- the `2x2` backbone is the less aggressive local-coupling version
+- it shrinks the spatial support more gradually
+- in the current `18 x 9` input setting, its bottleneck feature map is `15 x 6`
+
+#### `3x3` backbone
+
+This is the Phase 7C backbone ablation, where the channel plan is unchanged and only the kernel size is enlarged from `2x2` to `3x3`.
+
+Layer-by-layer shape flow in the current Group B setup (`[B, 8, 18, 9]` input):
+- input: `[B, 8, 18, 9]`
+- `conv1(k=3)`: `[B, 16, 16, 7]`
+- anti-rectifier: `[B, 32, 16, 7]`
+- `conv2(k=3)`: `[B, 32, 14, 5]`
+- anti-rectifier: `[B, 64, 14, 5]`
+- `conv3(k=3)`: `[B, 64, 12, 3]`
+- anti-rectifier: `[B, 128, 12, 3]`
+- `deconv2(k=3)`: `[B, 32, 14, 5]`
+- anti-rectifier: `[B, 64, 14, 5]`
+- `deconv3(k=3)`: `[B, 16, 16, 7]`
+- anti-rectifier: `[B, 32, 16, 7]`
+- dropout: `[B, 32, 16, 7]`
+- `deconv4(k=3)`: `[B, 1, 18, 9]`
+- reshape / split real-imag: `[B, 18, 9] -> [B, 9, 9] + [B, 9, 9] -> Rz [B, 9, 9]`
+
+Interpretation:
+- the `3x3` backbone keeps exactly the same encoder-decoder depth and channel schedule as the `2x2` model
+- the only controlled architectural change is the larger local receptive field at every convolution and transposed-convolution stage
+- because there is no padding, the `3x3` version compresses the spatial dimensions faster
+- in the current `18 x 9` input setting, its bottleneck feature map is `12 x 3`
 
 ### Current warning
 
@@ -507,16 +607,17 @@ Current repo style prefers:
 13. The Phase 7A two-subarray screening shows that reducing spatial smoothing from `3-of-3` row blocks to `2-of-3` is not a single scalar weakening; which row pair is chosen matters a lot in coherent hard cells. The contiguous `rows 0+1` variant can outperform the full `3-of-3` baseline in the hardest coherent cells, while the skip-middle `rows 0+2` and `rows 1+2` choices are usually worse there.
 14. In easier or non-coherent cells, the difference between `3-of-3` and `2-of-3` spatial smoothing becomes much smaller. This means the spatial-smoothing floor is mainly a hard coherent boundary issue rather than a universal requirement of the Group B pipeline.
 15. The Phase 7A result also means reduced-SS variants should not be treated as pure "less smoothing" controls. Row-pair geometry matters enough that future reduced-SS studies should preserve pair identity explicitly rather than collapsing all `2-of-3` choices into one bucket.
-16. Phase 7B Phase 1.1 provides the first positive evidence that the reduced-SS branch diversity can be exploited by a learned model rather than only by fixed branch selection. In the primary hard coherent cell (`1 deg`, `1 dB`, `T = 40`), the learned SS-fusion model achieved about `0.4516 deg`, slightly better than the current `SS(3/3)` learned baseline at about `0.4747 deg` and clearly better than the best fixed `SS(2/3: rows 0+1)` learned baseline at about `0.6995 deg`.
-17. Phase 7B Phase 1.1.1 refines that interpretation. The `1x1` channel-only fusion model achieved about `0.5414 deg` in the same hard coherent cell, which is still better than the fixed `SS(3/3)` learned baseline and the fixed `SS(2/3: rows 0+1)` learned baseline, but worse than the earlier spatial-fusion Phase `1.1` result at about `0.4516 deg`.
-18. This comparison suggests that adaptive branch fusion is genuinely useful, because even the more restricted `1x1` fusion beats the fixed learned baselines. At the same time, the current spatial-fusion model appears stronger than the channel-only version, so some of the Phase `1.1` gain may come from limited spatial covariance refinement rather than branch weighting alone.
-19. The learned SS-fusion path is therefore promising but not yet settled. The current best result still comes from the original Phase `1.1` spatial-fusion model, while the `1x1` channel-only version should presently be interpreted as a useful structural ablation that improves understanding of why fusion helps.
-20. Root-MUSIC remains the most fragile component in both classical and learned forms and should still be treated as experimental unless it is the explicit object of study.
-21. The experiment framework is now mature enough that future work should be targeted:
+16. Phase 7B Phase 1.1 provided the first positive evidence that the reduced-SS branch diversity can be exploited by a learned model rather than only by fixed branch selection. In the primary hard coherent cell (`1 deg`, `1 dB`, `T = 40`), the learned SS-fusion model achieved about `0.4516 deg`, slightly better than the then-current `SS(3/3)` learned baseline at about `0.4747 deg` and clearly better than the best fixed `SS(2/3: rows 0+1)` learned baseline at about `0.6995 deg`.
+17. Phase 7B Phase 1.1.1 refined that interpretation. The `1x1` channel-only fusion model achieved about `0.5414 deg` in the same hard coherent cell, which is still better than the fixed `SS(2/3: rows 0+1)` learned baseline and only moderately worse than the fixed `SS(3/3)` learned baseline, but worse than the earlier spatial-fusion Phase `1.1` result.
+18. Phase 7C then changed the picture again by holding the learned schemes fixed and enlarging the SubspaceNet backbone kernel from `2x2` to `3x3`. All four tested learned variants improved in the same hard coherent cell: `SS(3/3)` improved from about `0.4747 deg` to about `0.4087 deg`, `SS(2/3: rows 0+1)` from about `0.6995 deg` to about `0.5386 deg`, spatial learned fusion from about `0.4516 deg` to about `0.4118 deg`, and `1x1` channel-only fusion from about `0.5414 deg` to about `0.4396 deg`.
+19. The Phase 7C ranking is especially informative. With the `3x3` backbone, the plain `SS(3/3)` learned baseline becomes the best performer, and the spatial-fusion model falls to a very close second rather than a clear first. This suggests that the earlier fusion advantage was real but comparatively small, and that backbone receptive-field size is itself a strong lever in the hard coherent Group B regime.
+20. The learned SS-fusion path is therefore still promising but not yet settled. The current evidence no longer supports treating spatial fusion alone as the preferred next default; instead, the strongest present configuration in the primary hard cell is the simpler `SS(3/3) -> LRMC -> SubspaceNet(3x3) -> ESPRIT` path, while learned fusion remains a near-best extension worth testing across more cells.
+21. Root-MUSIC remains the most fragile component in both classical and learned forms and should still be treated as experimental unless it is the explicit object of study.
+22. The experiment framework is now mature enough that future work should be targeted:
    - coherent low-separation Group B, especially `1 - 2 deg`
    - combined hard regimes such as low-separation plus low-snapshot
    - focused SubspaceNet-ESPRIT improvements in the hard coherent cells
    - preprocessing ablations that distinguish when non-coherent MUSIC can skip `SS -> LRMC` versus when Root-MUSIC / ESPRIT still require it
    - reduced-SS follow-up centered on the best coherent `2-of-3` row pair rather than treating all two-subarray variants as equivalent
-   - learned SS-fusion follow-up that checks whether the Phase `1.1` gain persists across the next coherent hard cells before treating it as a new default
+   - learned SS-fusion follow-up that checks whether the Phase `1.1` gain persists across the next coherent hard cells once the stronger `3x3` backbone is used
    - structure-aware SS-fusion follow-up that clarifies whether the best next model should use spatial fusion, channel-only fusion, or more explicitly constrained weighted fusion

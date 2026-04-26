@@ -1,0 +1,5 @@
+scheme,fusion_type,backbone_kernel,rmse_deg
+SS(3/3),none,3,0.4087025779819007
+SS(2/3: rows 0+1),none,3,0.5385864253140383
+SS(2/3 x 3) learned fusion,spatial 3x3 fusion,3,0.4117525987400326
+SS(2/3 x 3) 1x1 learned fusion,1x1 channel-only fusion,3,0.4395735584579191
