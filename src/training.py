@@ -220,6 +220,9 @@ class TrainingParams(object):
                     fusion_diagonal_loading=float(
                         getattr(system_model.params, "ss_fusion_diagonal_loading", 1e-6)
                     ),
+                    backbone_kernel_size=int(
+                        getattr(system_model.params, "subspacenet_backbone_kernel_size", 2)
+                    ),
                 )
             elif self.model_type.startswith("SubspaceNetSSFusionEspritPhase1p1"):
                 if not isinstance(tau, int):
@@ -237,6 +240,9 @@ class TrainingParams(object):
                     fusion_diagonal_loading=float(
                         getattr(system_model.params, "ss_fusion_diagonal_loading", 1e-6)
                     ),
+                    backbone_kernel_size=int(
+                        getattr(system_model.params, "subspacenet_backbone_kernel_size", 2)
+                    ),
                 )
             elif self.model_type.startswith("SubspaceNet"):
                 if not isinstance(tau, int):
@@ -246,7 +252,12 @@ class TrainingParams(object):
                 self.tau = tau
                 self.diff_method = diff_method
                 model = SubspaceNet(
-                    tau=tau, M=system_model.params.M, diff_method=diff_method
+                    tau=tau,
+                    M=system_model.params.M,
+                    diff_method=diff_method,
+                    backbone_kernel_size=int(
+                        getattr(system_model.params, "subspacenet_backbone_kernel_size", 2)
+                    ),
                 )
             else:
                 raise Exception(

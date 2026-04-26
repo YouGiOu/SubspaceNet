@@ -158,6 +158,9 @@ class ModelGenerator(object):
                 fusion_diagonal_loading=float(
                     getattr(system_model_params, "ss_fusion_diagonal_loading", 1e-6)
                 ),
+                backbone_kernel_size=int(
+                    getattr(system_model_params, "subspacenet_backbone_kernel_size", 2)
+                ),
             )
         elif self.model_type.startswith("SubspaceNetSSFusionEspritPhase1p1"):
             self.model = SubspaceNetSSFusionEspritPhase1p1(
@@ -169,10 +172,18 @@ class ModelGenerator(object):
                 fusion_diagonal_loading=float(
                     getattr(system_model_params, "ss_fusion_diagonal_loading", 1e-6)
                 ),
+                backbone_kernel_size=int(
+                    getattr(system_model_params, "subspacenet_backbone_kernel_size", 2)
+                ),
             )
         elif self.model_type.startswith("SubspaceNet"):
             self.model = SubspaceNet(
-                tau=self.tau, M=system_model_params.M, diff_method=self.diff_method
+                tau=self.tau,
+                M=system_model_params.M,
+                diff_method=self.diff_method,
+                backbone_kernel_size=int(
+                    getattr(system_model_params, "subspacenet_backbone_kernel_size", 2)
+                ),
             )
         else:
             raise Exception(
@@ -304,7 +315,13 @@ class SubspaceNet(nn.Module):
 
     """
 
-    def __init__(self, tau: int, M: int, diff_method: str = "root_music"):
+    def __init__(
+        self,
+        tau: int,
+        M: int,
+        diff_method: str = "root_music",
+        backbone_kernel_size: int = 2,
+    ):
         """Initializes the SubspaceNet model.
 
         Args:
@@ -316,12 +333,23 @@ class SubspaceNet(nn.Module):
         super(SubspaceNet, self).__init__()
         self.M = M
         self.tau = tau
-        self.conv1 = nn.Conv2d(self.tau, 16, kernel_size=2)
-        self.conv2 = nn.Conv2d(32, 32, kernel_size=2)
-        self.conv3 = nn.Conv2d(64, 64, kernel_size=2)
-        self.deconv2 = nn.ConvTranspose2d(128, 32, kernel_size=2)
-        self.deconv3 = nn.ConvTranspose2d(64, 16, kernel_size=2)
-        self.deconv4 = nn.ConvTranspose2d(32, 1, kernel_size=2)
+        self.backbone_kernel_size = int(backbone_kernel_size)
+        if self.backbone_kernel_size not in {2, 3}:
+            raise ValueError(
+                "SubspaceNet.__init__: backbone_kernel_size must be one of {2, 3}"
+            )
+        self.conv1 = nn.Conv2d(self.tau, 16, kernel_size=self.backbone_kernel_size)
+        self.conv2 = nn.Conv2d(32, 32, kernel_size=self.backbone_kernel_size)
+        self.conv3 = nn.Conv2d(64, 64, kernel_size=self.backbone_kernel_size)
+        self.deconv2 = nn.ConvTranspose2d(
+            128, 32, kernel_size=self.backbone_kernel_size
+        )
+        self.deconv3 = nn.ConvTranspose2d(
+            64, 16, kernel_size=self.backbone_kernel_size
+        )
+        self.deconv4 = nn.ConvTranspose2d(
+            32, 1, kernel_size=self.backbone_kernel_size
+        )
         self.DropOut = nn.Dropout(0.2)
         self.ReLU = nn.ReLU()
         # Set the subspace method for training
@@ -504,8 +532,14 @@ class SubspaceNetSSFusionEspritPhase1p1(SubspaceNet):
         M: int,
         fusion_hidden_channels: int = 16,
         fusion_diagonal_loading: float = 1e-6,
+        backbone_kernel_size: int = 2,
     ):
-        super().__init__(tau=tau, M=M, diff_method="esprit")
+        super().__init__(
+            tau=tau,
+            M=M,
+            diff_method="esprit",
+            backbone_kernel_size=backbone_kernel_size,
+        )
         hidden = int(max(4, fusion_hidden_channels))
         self.fusion_hidden_channels = hidden
         self.fusion_diagonal_loading = float(max(0.0, fusion_diagonal_loading))

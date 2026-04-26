@@ -429,6 +429,8 @@ def evaluate_subspacenet_rmse_deg(model, test_dataset: List):
         kernel_type = model.last_fusion_diagnostics.get("fusion_kernel_type")
         if kernel_type:
             summary["fusion_kernel_type"] = kernel_type
+    if getattr(model, "backbone_kernel_size", None) is not None:
+        summary["subspacenet_backbone_kernel_size"] = int(model.backbone_kernel_size)
     return float(np.mean(errors)), summary
 
 

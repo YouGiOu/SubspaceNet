@@ -195,6 +195,7 @@ After the geometry fixes and the coherent/non-coherent 2D studies, the project h
 - in the hardest tested coherent regime (`1 deg`, `1 dB`), classical performance remains poor even with `SS -> LRMC`, and additional snapshots help only modestly for the classical controls
 - in that same hard coherent regime, `SS -> LRMC -> SubspaceNet -> ESPRIT` improves strongly as snapshots increase and remains far better than the classical controls even at very low `T`
 - in Phase 7B Phase 1.1, a first learned SS-fusion model that fuses the three `SS(2/3)` LRMC branches slightly beat both the current `SS(3/3)` learned baseline and the best fixed `SS(2/3: rows 0+1)` learned baseline in the primary hard coherent cell
+- in Phase 7B Phase 1.1.1, a safer `1x1` channel-only SS-fusion variant still beat the two fixed learned baselines, but it did not beat the earlier spatial-fusion Phase 1.1 model
 - this regime is hard enough that learned methods can still matter
 
 ### Non-coherent Group B `1.9 lambda`
@@ -411,7 +412,12 @@ At the moment, the main practical learned target is:
 The current most promising architectural extension beyond the standard learned target is now:
 - learned SS-fusion on top of the Group B `SS(2/3)` LRMC branch family
 
-The first hard-cell result is encouraging, but it should still be treated as an early targeted success rather than a fully validated replacement for the standard pipeline.
+The first hard-cell results are encouraging, but they should still be treated as early targeted successes rather than a fully validated replacement for the standard pipeline.
+
+Current interpretation of the learned SS-fusion variants:
+- spatial-fusion Phase `1.1` is the strongest result so far in the primary hard coherent cell
+- `1x1` channel-only fusion Phase `1.1.1` still improves over the two fixed learned baselines, which suggests adaptive branch fusion itself is useful
+- however, the current `1x1` restriction loses some of the gain seen in the spatial-fusion model, so channel-only fusion should presently be treated as a useful structural ablation rather than the new preferred learned-fusion default
 
 ### Current paper-scale training configuration
 
@@ -502,12 +508,15 @@ Current repo style prefers:
 14. In easier or non-coherent cells, the difference between `3-of-3` and `2-of-3` spatial smoothing becomes much smaller. This means the spatial-smoothing floor is mainly a hard coherent boundary issue rather than a universal requirement of the Group B pipeline.
 15. The Phase 7A result also means reduced-SS variants should not be treated as pure "less smoothing" controls. Row-pair geometry matters enough that future reduced-SS studies should preserve pair identity explicitly rather than collapsing all `2-of-3` choices into one bucket.
 16. Phase 7B Phase 1.1 provides the first positive evidence that the reduced-SS branch diversity can be exploited by a learned model rather than only by fixed branch selection. In the primary hard coherent cell (`1 deg`, `1 dB`, `T = 40`), the learned SS-fusion model achieved about `0.4516 deg`, slightly better than the current `SS(3/3)` learned baseline at about `0.4747 deg` and clearly better than the best fixed `SS(2/3: rows 0+1)` learned baseline at about `0.6995 deg`.
-17. This Phase 7B Phase 1.1 result is encouraging because it suggests the branch differences found in Phase 7A are not just a classical preprocessing curiosity; they contain learnable information that can improve the hardest coherent learned target. At the same time, the gain over the standard `SS(3/3)` learned baseline is still modest, so the learned-fusion path should currently be treated as promising but not yet fully validated.
-18. Root-MUSIC remains the most fragile component in both classical and learned forms and should still be treated as experimental unless it is the explicit object of study.
-19. The experiment framework is now mature enough that future work should be targeted:
+17. Phase 7B Phase 1.1.1 refines that interpretation. The `1x1` channel-only fusion model achieved about `0.5414 deg` in the same hard coherent cell, which is still better than the fixed `SS(3/3)` learned baseline and the fixed `SS(2/3: rows 0+1)` learned baseline, but worse than the earlier spatial-fusion Phase `1.1` result at about `0.4516 deg`.
+18. This comparison suggests that adaptive branch fusion is genuinely useful, because even the more restricted `1x1` fusion beats the fixed learned baselines. At the same time, the current spatial-fusion model appears stronger than the channel-only version, so some of the Phase `1.1` gain may come from limited spatial covariance refinement rather than branch weighting alone.
+19. The learned SS-fusion path is therefore promising but not yet settled. The current best result still comes from the original Phase `1.1` spatial-fusion model, while the `1x1` channel-only version should presently be interpreted as a useful structural ablation that improves understanding of why fusion helps.
+20. Root-MUSIC remains the most fragile component in both classical and learned forms and should still be treated as experimental unless it is the explicit object of study.
+21. The experiment framework is now mature enough that future work should be targeted:
    - coherent low-separation Group B, especially `1 - 2 deg`
    - combined hard regimes such as low-separation plus low-snapshot
    - focused SubspaceNet-ESPRIT improvements in the hard coherent cells
    - preprocessing ablations that distinguish when non-coherent MUSIC can skip `SS -> LRMC` versus when Root-MUSIC / ESPRIT still require it
    - reduced-SS follow-up centered on the best coherent `2-of-3` row pair rather than treating all two-subarray variants as equivalent
    - learned SS-fusion follow-up that checks whether the Phase `1.1` gain persists across the next coherent hard cells before treating it as a new default
+   - structure-aware SS-fusion follow-up that clarifies whether the best next model should use spatial fusion, channel-only fusion, or more explicitly constrained weighted fusion
