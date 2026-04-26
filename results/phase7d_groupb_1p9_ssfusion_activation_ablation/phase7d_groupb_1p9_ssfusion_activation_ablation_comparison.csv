@@ -1,0 +1,2 @@
+scheme,fusion_activation,backbone_kernel,rmse_deg,delta_vs_relu_spatial_3x3,delta_vs_plain_ss33_3x3
+SS(2/3 x 3) learned fusion,anti-rectifier width-controlled,3,0.35922418587611504,-0.05252841286391757,-0.04947839210578564

@@ -427,6 +427,13 @@ Current interpretation after the Phase 7C backbone ablation:
 - in this hard cell, the current best single result is therefore the plain `SS(3/3)` learned baseline with the `3x3` backbone, while the spatial-fusion `3x3` model remains a very close second
 - current working interpretation: local receptive-field size inside the SubspaceNet backbone matters enough that some of the earlier apparent fusion advantage was at least partly backbone-limited
 
+Current interpretation after the Phase 7D activation ablation:
+- replacing the spatial fusion block's plain `ReLU` with a width-controlled anti-rectifier improved the `3x3` spatial-fusion model from about `0.4118 deg` to about `0.3592 deg`
+- this new anti-rectifier fusion result now beats both the earlier ReLU spatial-fusion `3x3` model and the plain `SS(3/3)` `3x3` baseline at about `0.4087 deg`
+- the gain is large enough that it is unlikely to be explained as noise in this context, especially because the comparison was intentionally kept width-controlled rather than allowing a naive doubled-width anti-rectifier expansion
+- current working interpretation: sign-preserving activation inside the covariance-fusion block matters materially in this hard coherent regime, and the earlier Phase 7C result was limited not only by backbone receptive field but also by information loss inside the ReLU-based fusion block
+- current best single learned result in the primary coherent hard cell is now the width-controlled anti-rectifier spatial-fusion model with the `3x3` backbone
+
 ### Current paper-scale training configuration
 
 The large-sample runs use:
@@ -610,14 +617,16 @@ Current repo style prefers:
 16. Phase 7B Phase 1.1 provided the first positive evidence that the reduced-SS branch diversity can be exploited by a learned model rather than only by fixed branch selection. In the primary hard coherent cell (`1 deg`, `1 dB`, `T = 40`), the learned SS-fusion model achieved about `0.4516 deg`, slightly better than the then-current `SS(3/3)` learned baseline at about `0.4747 deg` and clearly better than the best fixed `SS(2/3: rows 0+1)` learned baseline at about `0.6995 deg`.
 17. Phase 7B Phase 1.1.1 refined that interpretation. The `1x1` channel-only fusion model achieved about `0.5414 deg` in the same hard coherent cell, which is still better than the fixed `SS(2/3: rows 0+1)` learned baseline and only moderately worse than the fixed `SS(3/3)` learned baseline, but worse than the earlier spatial-fusion Phase `1.1` result.
 18. Phase 7C then changed the picture again by holding the learned schemes fixed and enlarging the SubspaceNet backbone kernel from `2x2` to `3x3`. All four tested learned variants improved in the same hard coherent cell: `SS(3/3)` improved from about `0.4747 deg` to about `0.4087 deg`, `SS(2/3: rows 0+1)` from about `0.6995 deg` to about `0.5386 deg`, spatial learned fusion from about `0.4516 deg` to about `0.4118 deg`, and `1x1` channel-only fusion from about `0.5414 deg` to about `0.4396 deg`.
-19. The Phase 7C ranking is especially informative. With the `3x3` backbone, the plain `SS(3/3)` learned baseline becomes the best performer, and the spatial-fusion model falls to a very close second rather than a clear first. This suggests that the earlier fusion advantage was real but comparatively small, and that backbone receptive-field size is itself a strong lever in the hard coherent Group B regime.
-20. The learned SS-fusion path is therefore still promising but not yet settled. The current evidence no longer supports treating spatial fusion alone as the preferred next default; instead, the strongest present configuration in the primary hard cell is the simpler `SS(3/3) -> LRMC -> SubspaceNet(3x3) -> ESPRIT` path, while learned fusion remains a near-best extension worth testing across more cells.
-21. Root-MUSIC remains the most fragile component in both classical and learned forms and should still be treated as experimental unless it is the explicit object of study.
-22. The experiment framework is now mature enough that future work should be targeted:
+19. The Phase 7C ranking was informative because, before the activation follow-up, the plain `SS(3/3)` learned baseline briefly became the best performer and the spatial-fusion model fell to a very close second. That result showed that backbone receptive-field size is itself a strong lever in the hard coherent Group B regime and that some of the earlier fusion advantage had been backbone-limited.
+20. Phase 7D then sharpened the interpretation again. When the `3x3` spatial-fusion model replaced plain `ReLU` with a width-controlled anti-rectifier, its RMSE improved from about `0.4118 deg` to about `0.3592 deg`, beating both the ReLU spatial-fusion `3x3` reference and the plain `SS(3/3)` `3x3` baseline at about `0.4087 deg`.
+21. This Phase 7D result is important because the anti-rectifier comparison was intentionally width-controlled rather than implemented as a naive doubled-width expansion. That makes the improvement much stronger evidence that sign-preserving activation inside the covariance-fusion block is genuinely useful in the primary hard coherent cell, rather than the gain being mainly a by-product of increased hidden capacity.
+22. The learned SS-fusion path is therefore no longer just promising but structurally reinforced. The current best configuration in the primary hard coherent cell is now `SS(2/3 x 3) -> LRMC -> width-controlled anti-rectifier spatial fusion -> SubspaceNet(3x3) -> ESPRIT`.
+23. Root-MUSIC remains the most fragile component in both classical and learned forms and should still be treated as experimental unless it is the explicit object of study.
+24. The experiment framework is now mature enough that future work should be targeted:
    - coherent low-separation Group B, especially `1 - 2 deg`
    - combined hard regimes such as low-separation plus low-snapshot
    - focused SubspaceNet-ESPRIT improvements in the hard coherent cells
    - preprocessing ablations that distinguish when non-coherent MUSIC can skip `SS -> LRMC` versus when Root-MUSIC / ESPRIT still require it
    - reduced-SS follow-up centered on the best coherent `2-of-3` row pair rather than treating all two-subarray variants as equivalent
-   - learned SS-fusion follow-up that checks whether the Phase `1.1` gain persists across the next coherent hard cells once the stronger `3x3` backbone is used
-   - structure-aware SS-fusion follow-up that clarifies whether the best next model should use spatial fusion, channel-only fusion, or more explicitly constrained weighted fusion
+   - learned SS-fusion follow-up that checks whether the new anti-rectifier spatial-fusion gain persists across the next coherent hard cells
+   - structure-aware SS-fusion follow-up that clarifies whether the best next model should use anti-rectifier spatial fusion, channel-only fusion, or more explicitly constrained weighted fusion

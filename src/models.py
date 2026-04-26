@@ -52,6 +52,17 @@ warnings.simplefilter("ignore")
 # device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
+class AntiRectifier(nn.Module):
+    """Sign-preserving activation that concatenates positive and negative ReLU responses."""
+
+    def __init__(self):
+        super().__init__()
+        self.relu = nn.ReLU()
+
+    def forward(self, x: torch.Tensor):
+        return torch.cat((self.relu(x), self.relu(-x)), dim=1)
+
+
 class ModelGenerator(object):
     """
     Generates an instance of the desired model, according to model configuration parameters.
@@ -148,6 +159,20 @@ class ModelGenerator(object):
             )
         elif self.model_type.startswith("DeepCNN"):
             self.model = DeepCNN(N=system_model_params.N, grid_size=361)
+        elif self.model_type.startswith("SubspaceNetSSFusionAntiRectEspritPhase7d"):
+            self.model = SubspaceNetSSFusionAntiRectEspritPhase7d(
+                tau=self.tau,
+                M=system_model_params.M,
+                fusion_hidden_channels=int(
+                    getattr(system_model_params, "ss_fusion_hidden_channels", 16)
+                ),
+                fusion_diagonal_loading=float(
+                    getattr(system_model_params, "ss_fusion_diagonal_loading", 1e-6)
+                ),
+                backbone_kernel_size=int(
+                    getattr(system_model_params, "subspacenet_backbone_kernel_size", 2)
+                ),
+            )
         elif self.model_type.startswith("SubspaceNetSSFusionEspritPhase1p1p1"):
             self.model = SubspaceNetSSFusionEspritPhase1p1p1(
                 tau=self.tau,
@@ -621,6 +646,22 @@ class SubspaceNetSSFusionEspritPhase1p1p1(SubspaceNetSSFusionEspritPhase1p1):
             nn.ReLU(),
             nn.Conv2d(hidden, hidden, kernel_size=1),
             nn.ReLU(),
+            nn.Conv2d(hidden, 2, kernel_size=1),
+        )
+
+
+class SubspaceNetSSFusionAntiRectEspritPhase7d(SubspaceNetSSFusionEspritPhase1p1):
+    """Phase 7D spatial fusion with width-controlled anti-rectifier activations."""
+
+    fusion_kernel_type = "3x3_spatial_antirect_width_controlled"
+
+    def _build_fusion_block(self, hidden: int):
+        pre_activation_hidden = max(2, hidden // 2)
+        return nn.Sequential(
+            nn.Conv2d(6, pre_activation_hidden, kernel_size=3, padding=1),
+            AntiRectifier(),
+            nn.Conv2d(hidden, pre_activation_hidden, kernel_size=3, padding=1),
+            AntiRectifier(),
             nn.Conv2d(hidden, 2, kernel_size=1),
         )
 

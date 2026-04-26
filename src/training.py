@@ -50,6 +50,7 @@ from src.models import (
     DeepCNN,
     ModelGenerator,
     SubspaceNet,
+    SubspaceNetSSFusionAntiRectEspritPhase7d,
     SubspaceNetSSFusionEspritPhase1p1,
     SubspaceNetSSFusionEspritPhase1p1p1,
 )
@@ -204,6 +205,26 @@ class TrainingParams(object):
                 )
             elif self.model_type.startswith("DeepCNN"):
                 model = DeepCNN(N=system_model.params.N, grid_size=361)
+            elif self.model_type.startswith("SubspaceNetSSFusionAntiRectEspritPhase7d"):
+                if not isinstance(tau, int):
+                    raise ValueError(
+                        "TrainingParams.set_model: tau parameter must be provided for SubspaceNet model"
+                    )
+                self.tau = tau
+                self.diff_method = "esprit"
+                model = SubspaceNetSSFusionAntiRectEspritPhase7d(
+                    tau=tau,
+                    M=system_model.params.M,
+                    fusion_hidden_channels=int(
+                        getattr(system_model.params, "ss_fusion_hidden_channels", 16)
+                    ),
+                    fusion_diagonal_loading=float(
+                        getattr(system_model.params, "ss_fusion_diagonal_loading", 1e-6)
+                    ),
+                    backbone_kernel_size=int(
+                        getattr(system_model.params, "subspacenet_backbone_kernel_size", 2)
+                    ),
+                )
             elif self.model_type.startswith("SubspaceNetSSFusionEspritPhase1p1p1"):
                 if not isinstance(tau, int):
                     raise ValueError(

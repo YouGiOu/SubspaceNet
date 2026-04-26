@@ -107,8 +107,58 @@ That means the anti-rectifier fusion variant should be implemented so that:
 - the comparison stays as parameter-controlled as practical
 - post-activation channel growth does not accidentally become the main changed variable
 
-In other words:
-- do not simply insert anti-rectification in a way that doubles effective width everywhere without accounting for capacity
+What this means in concrete code terms:
+- the current spatial fusion block is:
+  - `Conv2d(6 -> h, k=3) -> ReLU -> Conv2d(h -> h, k=3) -> ReLU -> Conv2d(h -> 2, k=1)`
+- SubspaceNet's anti-rectifier is not a drop-in scalar activation
+  - it maps a tensor with `h` channels to `2h` channels by concatenating `ReLU(x)` and `ReLU(-x)`
+- so if we naively replace each `ReLU` with anti-rectification, the fusion block would become effectively:
+  - `Conv2d(6 -> h, k=3) -> AntiRect(h -> 2h) -> Conv2d(2h -> h, k=3) -> AntiRect(h -> 2h) -> Conv2d(2h -> 2, k=1)`
+- that is no longer a pure activation swap
+  - intermediate tensors are wider
+  - later convolutions see more input channels
+  - parameter count and representational capacity both change
+
+Why that matters:
+- if the anti-rectifier model wins after that naive change, we would not know whether it won because:
+  - sign-preserving activation is better
+  - or because the fusion module quietly became larger and more expressive
+
+### Preferred Fair Implementation
+The anti-rectifier variant should keep the effective hidden width as close as practical to the current ReLU model.
+
+Recommended interpretation:
+- keep the post-activation width fixed at about `h`, not `2h`
+
+One clean way to do that is:
+- change the pre-activation convolution width from `h` to `h/2`
+- then apply anti-rectification so the output width returns to about `h`
+
+Example when the current hidden width is `h = 16`:
+- current ReLU block:
+  - `Conv2d(6 -> 16, k=3) -> ReLU -> Conv2d(16 -> 16, k=3) -> ReLU -> Conv2d(16 -> 2, k=1)`
+- fairer anti-rectifier block:
+  - `Conv2d(6 -> 8, k=3) -> AntiRect(8 -> 16) -> Conv2d(16 -> 8, k=3) -> AntiRect(8 -> 16) -> Conv2d(16 -> 2, k=1)`
+
+This is not perfectly parameter-matched, but it is much closer to the intended ablation because:
+- the hidden feature width seen by the later stages stays near the original design
+- the main changed factor is sign-preserving activation behavior rather than a large width increase
+
+### Non-Preferred Implementation
+Avoid this version as the main experiment:
+- `Conv2d(6 -> 16, k=3) -> AntiRect(16 -> 32) -> Conv2d(32 -> 16, k=3) -> AntiRect(16 -> 32) -> Conv2d(32 -> 2, k=1)`
+
+Reason:
+- this variant changes both activation style and effective hidden width at the same time
+- any gain would be hard to interpret cleanly
+
+### Decision Rule For This Phase
+For Phase `7D`, the main reported anti-rectifier result should come from the width-controlled implementation above.
+
+If desired, the naive doubled-width anti-rectifier version can be run later as a separate follow-up, but it should be labeled explicitly as:
+- activation plus capacity change
+
+not as a pure activation ablation.
 
 ## Training Scale
 Use the same current SubspaceNet large-training scale as Phase `7C`.

@@ -1,0 +1,2 @@
+scheme,method,rmse_deg,avg_runtime_sec,avg_lrmc_runtime_sec,avg_lrmc_iterations,lrmc_convergence_rate,avg_lrmc_final_residual,min_lrmc_eigenvalue,min_lrmc_singular_value
+phase7d_gb19_coh_g1_s1_ssfusion_antirect_backbone3x3,esprit,0.35922418587611504,,,,,,,
