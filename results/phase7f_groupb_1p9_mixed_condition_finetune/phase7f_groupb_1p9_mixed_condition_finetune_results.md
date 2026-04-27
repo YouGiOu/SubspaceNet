@@ -18,9 +18,46 @@ Experimental conditions:
 
 Reference anchor RMSE: `0.3592 deg`
 
+## Header And Bucket Meanings
+
+- `Delta vs anchor`:
+  difference relative to the Phase `7D` source hard-cell reference RMSE of `0.3592 deg`.
+  Negative means the Phase `7F` result is better than the original Phase `7D` anchor.
+  Positive means it is worse.
+
+- `Delta vs classical best`:
+  difference relative to the best classical control from the Phase 6 fixed-gap / SNR grid that used the canonical Group B classical front end:
+  - `SS -> LRMC`
+  - followed by `DBF`, `MUSIC`, `Root-MUSIC`, or `ESPRIT`
+
+  Important:
+  these are not raw original `Root-MUSIC` / `ESPRIT` numbers on the non-uniform array.
+  They are Phase 6 classical controls with preprocessing, except for `DBF`, which is naturally reported from the corresponding classical control run.
+
+- `Delta vs direct learned`:
+  difference relative to the earlier direct per-cell learned Phase 6 reference trained specifically for that exact cell.
+
+- `Delta vs Phase 7E`:
+  difference relative to the zero-shot transfer result from Phase `7E`.
+
+- `coherent_ood`:
+  all coherent reused evaluation cells except the in-domain anchor cell `gap = 1 deg`, `SNR = 1 dB`.
+
+- `noncoherent_transfer` or `full_noncoherent_transfer`:
+  all reused non-coherent evaluation cells.
+
+- `snr_shift_only`:
+  cells where gap stays at `1 deg` and only SNR shifts.
+
+- `gap_shift_only`:
+  cells where SNR stays at `1 dB` and only gap shifts.
+
+- `joint_gap_snr_shift`:
+  cells where both gap and SNR differ from the source training cell.
+
 ## Coherent Reused Grid
 
-| Gap (deg) | SNR (dB) | RMSE (deg) | Avg runtime / sample (s) | Delta vs anchor | Delta vs classical best | Delta vs direct learned | Delta vs Phase 7E | Cache status |
+| Gap (deg) | SNR (dB) | RMSE (deg) | Avg runtime / sample (s) | Delta vs anchor | Delta vs classical best (`SS -> LRMC` Phase 6 control) | Delta vs direct learned | Delta vs Phase 7E | Cache status |
 | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
 | 1 | 1 | 0.4481 | 0.016274 | +0.0889 | -6.2003 | 0.0334 | 0.0918 | loaded |
 | 1 | 5 | 0.3401 | 0.015964 | -0.0192 | -5.0968 | -0.0330 | -0.6219 | loaded |
@@ -45,7 +82,7 @@ Reference anchor RMSE: `0.3592 deg`
 
 ## Non-Coherent Reused Grid
 
-| Gap (deg) | SNR (dB) | RMSE (deg) | Avg runtime / sample (s) | Delta vs anchor | Delta vs classical best | Delta vs direct learned | Delta vs Phase 7E | Cache status |
+| Gap (deg) | SNR (dB) | RMSE (deg) | Avg runtime / sample (s) | Delta vs anchor | Delta vs classical best (`SS -> LRMC` Phase 6 control) | Delta vs direct learned | Delta vs Phase 7E | Cache status |
 | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
 | 1 | 1 | 0.3693 | 0.016602 | +0.0101 | -4.7130 | -0.0308 | 0.0356 | loaded |
 | 1 | 5 | 0.2448 | 0.016431 | -0.1145 | -0.6796 | -0.1339 | -0.5994 | loaded |
@@ -91,7 +128,7 @@ Reference anchor RMSE: `0.3592 deg`
 
 ## Comparison Table
 
-| Cell | Phase 6 classical best | RMSE (deg) | Avg runtime / sample (s) | Delta vs classical best | Direct Phase 6 learned RMSE (deg) | Delta vs direct learned | Phase 7E RMSE (deg) | Delta vs Phase 7E |
+| Cell | Phase 6 classical best (`SS -> LRMC` control family) | RMSE (deg) | Avg runtime / sample (s) | Delta vs classical best | Direct Phase 6 learned RMSE (deg) | Delta vs direct learned | Phase 7E RMSE (deg) | Delta vs Phase 7E |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | coherent | gap 1 | snr 1 | esprit (6.6485) | 0.4481 | 0.016274 | -6.2003 | 0.4147 | +0.0334 | 0.3563 | +0.0918 |
 | coherent | gap 1 | snr 5 | esprit (5.4369) | 0.3401 | 0.015964 | -5.0968 | 0.3731 | -0.0330 | 0.9620 | -0.6219 |
@@ -133,3 +170,40 @@ Reference anchor RMSE: `0.3592 deg`
 | non-coherent | gap 5 | snr 5 | dbf (0.1060) | 0.5789 | 0.016350 | +0.4729 | 0.2047 | +0.3742 | 2.6103 | -2.0314 |
 | non-coherent | gap 5 | snr 10 | dbf (0.1033) | 0.5025 | 0.016129 | +0.3993 | 0.1495 | +0.3530 | 2.7037 | -2.2012 |
 | non-coherent | gap 5 | snr 15 | dbf (0.1029) | 0.5037 | 0.016346 | +0.4009 | 0.1449 | +0.3588 | 2.7278 | -2.2240 |
+
+## Raw No-Preprocessing Reference
+
+The `Phase 6 classical best` column above refers to the preprocessed classical controls from:
+- coherent: Phase `6` with `SS -> LRMC`
+- non-coherent: Phase `6` with `SS -> LRMC`
+
+It does **not** refer to the raw original shift-invariant methods on the non-uniform array.
+
+Those raw no-preprocessing references were run separately in:
+- [phase6b_groupb_1p9_coherent_fixed_gap_snr_grid_no_preproc_results.md](/d:/workspace1/SubspaceNet/results/phase6b_groupb_1p9_coherent_fixed_gap_snr_grid_no_preproc/phase6b_groupb_1p9_coherent_fixed_gap_snr_grid_no_preproc_results.md)
+- [phase6_groupb_1p9_noncoherent_fixed_gap_snr_grid_no_preproc_results.md](/d:/workspace1/SubspaceNet/results/phase6_groupb_1p9_noncoherent_fixed_gap_snr_grid_no_preproc/phase6_groupb_1p9_noncoherent_fixed_gap_snr_grid_no_preproc_results.md)
+
+These runs confirm the earlier project conclusion that pure original `Root-MUSIC` and `ESPRIT` are poor on the Group B non-uniform array without preprocessing.
+
+### Raw `Root-MUSIC` / `ESPRIT` RMSE Ranges Without Preprocessing
+
+| Regime | Raw Root-MUSIC RMSE range (deg) | Raw ESPRIT RMSE range (deg) |
+| --- | ---: | ---: |
+| Coherent Group B `1.9 lambda` | `8.2488 - 10.6188` | `7.9130 - 10.6934` |
+| Non-coherent Group B `1.9 lambda` | `7.0409 - 8.6494` | `7.5419 - 8.6244` |
+
+### Representative Raw No-Preprocessing Reference Cells
+
+| Regime | Cell | Raw Root-MUSIC (deg) | Raw ESPRIT (deg) |
+| --- | --- | ---: | ---: |
+| Coherent | gap `1`, snr `1` | `10.4446` | `10.5181` |
+| Coherent | gap `4`, snr `1` | `8.3065` | `7.9130` |
+| Coherent | gap `5`, snr `15` | `8.2474` | `8.2408` |
+| Non-coherent | gap `1`, snr `1` | `8.6494` | `8.0267` |
+| Non-coherent | gap `2`, snr `5` | `7.3458` | `7.6602` |
+| Non-coherent | gap `5`, snr `15` | `7.0409` | `7.5389` |
+
+Interpretation:
+- yes, the earlier recollection was correct
+- on this non-uniform Group B array, raw `Root-MUSIC` and raw `ESPRIT` perform very poorly without preprocessing
+- the much stronger Phase 6 classical `Root-MUSIC` / `ESPRIT` numbers used in the main comparison come from the `SS -> LRMC` front end, not from the raw original methods

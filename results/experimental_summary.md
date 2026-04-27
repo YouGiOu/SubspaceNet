@@ -443,6 +443,17 @@ Current interpretation after the Phase 7E transfer study:
 - current working interpretation: the Phase `7D` model is a strong hard-cell specialist rather than a broadly robust Group B default, so wider deployment will likely require mixed-cell or mixed-regime training rather than zero-shot transfer from the single coherent hard cell
 - runtime is very stable across the reused grid at roughly `0.0163 s` to `0.0169 s` per sample for the full preprocessing-plus-inference path, so the main limitation exposed by Phase `7E` is generalization quality rather than runtime instability
 
+Current interpretation after the Phase 7F mixed-condition fine-tuning run:
+- fine-tuning the Phase `7D` checkpoint on the broader `360k` mixed-condition dataset changes the picture substantially: coherent OOD mean RMSE drops from about `2.13 deg` in Phase `7E` to about `0.62 deg`, and non-coherent transfer mean RMSE drops from about `1.68 deg` to about `0.37 deg`
+- this is therefore the first strong evidence in the repo that mixed-condition training, rather than single-cell transfer alone, can turn the hard-cell specialist into a much broader Group B model
+- the cost is partial source-cell forgetting: the original coherent `1 deg`, `1 dB` anchor degrades from about `0.3563 deg` / `0.3592 deg` to about `0.4481 deg`, so the broadening step helps generalization strongly but does not fully preserve the very best hard-cell optimum
+- the gain pattern is still very favorable overall: the Phase `7F` model strongly improves over Phase `7E` on nearly the entire reused grid, especially for coherent OOD cells and for the non-coherent transfer family
+- coherent transfer is now much stronger across the grid, with many cells around `0.24 - 0.61 deg` in the easier `3 - 5 deg` region and about `1.20 - 1.38 deg` in the tougher coherent `2 deg` region
+- non-coherent transfer improves even more dramatically, with mean RMSE around `0.37 deg` and many cells in the `0.24 - 0.35 deg` range; this is a large improvement over the zero-shot transfer behavior from Phase `7E`
+- despite that improvement, the model still does not dominate every direct per-cell learned reference or every preprocessed classical best control, especially in some easier wide-gap cells, so the current interpretation should be "broadly improved mixed-condition model" rather than "uniformly best in every cell"
+- runtime remains stable at about `0.0162 - 0.0165 s` per sample across the evaluation grid, so the mixed-condition fine-tuning gain comes without an operational runtime penalty
+- current working interpretation: mixed-condition fine-tuning is the correct next direction for practical deployment, but source hard-cell retention still needs active protection if the goal is to keep the original `1 deg`, `1 dB` coherent optimum nearly unchanged
+
 ### Current paper-scale training configuration
 
 The large-sample runs use:
@@ -634,9 +645,11 @@ Current repo style prefers:
 24. In coherent transfer, the model still strongly beats the classical controls in the hardest low-gap corner, but its RMSE rises to about `0.96 - 2.72 deg` across the remaining reused coherent cells and is usually much worse than direct per-cell learned models. This means the model has learned something real about the hard coherent boundary, but not a broadly reusable solution over the whole coherent grid.
 25. In non-coherent transfer, the picture is even less favorable as a general-purpose default. Outside the `1 deg`, `1 dB` corner and a few nearby cells, the transferred model is usually much worse than both the direct learned non-coherent references and the strong classical non-coherent controls. This indicates that coherence-type shift remains a major generalization boundary for the current single-cell-trained model.
 26. Phase 7E also shows that runtime is not the issue: the full preprocessing-plus-inference path stays very stable at about `0.0163 s` to `0.0169 s` per sample across the reused grid. The limiting factor is therefore transfer quality, not computational volatility.
-27. The current best interpretation is that the anti-rectifier fusion model is the best available hard-cell specialist, not yet a broad Group B default. If broader robustness is the next goal, the most justified next step is mixed-cell or mixed-regime training rather than assuming that the best single-cell model will transfer cleanly.
-28. Root-MUSIC remains the most fragile component in both classical and learned forms and should still be treated as experimental unless it is the explicit object of study.
-29. The experiment framework is now mature enough that future work should be targeted:
+27. Phase 7F then showed that this limitation is not fundamental to the architecture alone. Fine-tuning the Phase `7D` anti-rectifier fusion checkpoint on a `360k` mixed-condition dataset with `60%` coherent and `40%` non-coherent samples reduced coherent OOD mean RMSE from about `2.13 deg` to about `0.62 deg` and non-coherent transfer mean RMSE from about `1.68 deg` to about `0.37 deg` relative to the Phase `7E` zero-shot transfer baseline.
+28. This is the strongest current evidence that dataset design and training distribution are the key levers for turning the best hard-cell specialist into a broader Group B model. The tradeoff is partial retention loss: the source coherent `1 deg`, `1 dB` anchor worsened from about `0.3563 deg` to about `0.4481 deg`, so broad robustness improved strongly but did not come for free.
+29. The current best interpretation is therefore more nuanced: the Phase `7D` model is the best pure hard-cell specialist, while the Phase `7F` fine-tuned model is the best current broad-coverage candidate. If practical deployment across varied conditions is the goal, mixed-condition fine-tuning is now the most justified direction, with the next challenge being stronger protection of the original hard coherent corner during broadening.
+30. Root-MUSIC remains the most fragile component in both classical and learned forms and should still be treated as experimental unless it is the explicit object of study.
+31. The experiment framework is now mature enough that future work should be targeted:
    - coherent low-separation Group B, especially `1 - 2 deg`
    - combined hard regimes such as low-separation plus low-snapshot
    - focused SubspaceNet-ESPRIT improvements in the hard coherent cells
@@ -644,4 +657,4 @@ Current repo style prefers:
    - reduced-SS follow-up centered on the best coherent `2-of-3` row pair rather than treating all two-subarray variants as equivalent
    - learned SS-fusion follow-up that checks whether the new anti-rectifier spatial-fusion gain persists across the next coherent hard cells
    - structure-aware SS-fusion follow-up that clarifies whether the best next model should use anti-rectifier spatial fusion, channel-only fusion, or more explicitly constrained weighted fusion
-   - mixed-cell or mixed-regime training follow-up that tests whether the Phase `7D` hard-cell specialist can be turned into a genuinely transferable Group B model
+   - mixed-cell or mixed-regime training follow-up that improves retention of the coherent `1 deg`, `1 dB` anchor while preserving the broad transfer gains already demonstrated in Phase `7F`
