@@ -779,5 +779,6 @@
       "Comparison focus: source-cell retention and delta vs Phase 7E"
     ]
   },
-  "template_name": "phase7f_groupb_1p9_mixed_condition_finetune_eval"
+  "template_name": "phase7f_groupb_1p9_mixed_condition_finetune_eval",
+  "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\test\\phase7f_groupb_1p9_mixed_condition_finetune\\phase7f_groupb_1p9_mixed_condition_finetune_eval.json"
 }

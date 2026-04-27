@@ -9,16 +9,22 @@ import sys
 from pathlib import Path
 
 
-PHASE7F_TRAIN_EXPERIMENTS = [
-    "phase7f_gb19_mixed_antirect_finetune_360k",
-]
-
 PHASE7F_TEST_EXPERIMENTS = [
     "phase7f_groupb_1p9_mixed_condition_finetune_eval",
 ]
 
 GAPS = [1, 2, 3, 4, 5]
 SNRS = [1, 5, 10, 15]
+PHASE7F_STAGE_COUNT = 8
+PHASE7F_STAGE_SAMPLES = 45000
+PHASE7F_STAGE_TRAINING_SAMPLES = 40500
+PHASE7F_STAGE_TEST_SAMPLES = 4500
+PHASE7F_STRATIFIED_SAMPLES = 30000
+PHASE7F_WEIGHTED_RANDOM_SAMPLES = 15000
+PHASE7F_COHERENT_CELL_SAMPLES = 900
+PHASE7F_NONCOHERENT_CELL_SAMPLES = 600
+PHASE7F_STAGE_EPOCHS = 6
+PHASE7F_STAGE_TEST_RATIO = 0.1
 
 
 def parse_args():
@@ -96,6 +102,14 @@ def load_json(path: Path):
         return json.load(handle)
 
 
+def get_stage_experiment_name(stage_index: int):
+    return f"phase7f_gb19_mixed_antirect_finetune_stage{stage_index:02d}_45k"
+
+
+def get_final_stage_experiment_name():
+    return get_stage_experiment_name(PHASE7F_STAGE_COUNT)
+
+
 def ensure_phase7f_training_templates(
     repo_root: Path, generated_templates_dir: Path, seed: int
 ):
@@ -134,59 +148,80 @@ def ensure_phase7f_training_templates(
                 }
             )
 
-    template = json.loads(json.dumps(source_template))
-    template["template_name"] = PHASE7F_TRAIN_EXPERIMENTS[0]
-    template["description"] = (
-        "Phase 7F Group B 1.9 lambda mixed-condition fine-tuning run using the Phase "
-        "7D anti-rectifier fusion checkpoint as initialization and a 360k mixed dataset."
-    )
-    template["scenario_data_path"] = "p7f_mixft_360k_v1"
-    template["methods"] = ["esprit"]
-    template["seed"] = seed
+    stage_experiments = []
+    for stage_index in range(1, PHASE7F_STAGE_COUNT + 1):
+        stage_name = get_stage_experiment_name(stage_index)
+        stage_experiments.append(stage_name)
+        template = json.loads(json.dumps(source_template))
+        template["template_name"] = stage_name
+        template["description"] = (
+            "Phase 7F Group B 1.9 lambda staged mixed-condition fine-tuning run "
+            f"{stage_index}/{PHASE7F_STAGE_COUNT} using a 45k mixed dataset chunk."
+        )
+        template["scenario_data_path"] = f"p7f_mixft_s{stage_index:02d}_45k"
+        template["methods"] = ["esprit"]
+        template["seed"] = seed + stage_index - 1
 
-    template["commands"]["CREATE_DATA"] = True
-    template["commands"]["CACHE_DATASET"] = True
-    template["commands"]["LOAD_DATA"] = False
-    template["commands"]["TRAIN_MODEL"] = True
-    template["commands"]["EVALUATE_MODE"] = True
+        template["commands"]["CREATE_DATA"] = True
+        template["commands"]["CACHE_DATASET"] = True
+        template["commands"]["LOAD_DATA"] = False
+        template["commands"]["TRAIN_MODEL"] = True
+        template["commands"]["EVALUATE_MODE"] = True
 
-    template["dataset"] = {
-        "samples_size": 360000,
-        "train_test_ratio": 0.2,
-        "mixed_dataset": {
-            "stratified_cells": stratified_cells,
-            "weighted_random": {
-                "total_samples": 120000,
-                "coherence_weights": {"coherent": 0.6, "noncoherent": 0.4},
-                "snr_weights": {"1": 0.35, "5": 0.30, "10": 0.20, "15": 0.15},
-                "gap_group_weights": [
-                    {"gaps": [1.0, 2.0], "weight": 0.50},
-                    {"gaps": [3.0], "weight": 0.30},
-                    {"gaps": [4.0, 5.0], "weight": 0.20},
+        template["dataset"] = {
+            "samples_size": PHASE7F_STAGE_SAMPLES,
+            "train_test_ratio": PHASE7F_STAGE_TEST_RATIO,
+            "mixed_dataset": {
+                "stratified_cells": [
+                    {
+                        **cell,
+                        "total_samples": (
+                            PHASE7F_COHERENT_CELL_SAMPLES
+                            if cell["coherence_key"] == "coherent"
+                            else PHASE7F_NONCOHERENT_CELL_SAMPLES
+                        ),
+                    }
+                    for cell in stratified_cells
                 ],
+                "weighted_random": {
+                    "total_samples": PHASE7F_WEIGHTED_RANDOM_SAMPLES,
+                    "coherence_weights": {"coherent": 0.6, "noncoherent": 0.4},
+                    "snr_weights": {"1": 0.35, "5": 0.30, "10": 0.20, "15": 0.15},
+                    "gap_group_weights": [
+                        {"gaps": [1.0, 2.0], "weight": 0.50},
+                        {"gaps": [3.0], "weight": 0.30},
+                        {"gaps": [4.0, 5.0], "weight": 0.20},
+                    ],
+                },
             },
-        },
-    }
+        }
 
-    training = template["training"]
-    training["epochs"] = 50
-    training["learning_rate"] = 5e-6
-    training["scheduler_step_size"] = 30
-    training["scheduler_gamma"] = 0.5
-    training["pretrained_experiment_dir"] = (
-        "results/phase7d_groupb_1p9_ssfusion_activation_ablation/"
-        "phase7d_gb19_coh_g1_s1_ssfusion_antirect_backbone3x3"
-    )
-    training["pretrained_method_name"] = "esprit"
+        training = template["training"]
+        training["epochs"] = PHASE7F_STAGE_EPOCHS
+        training["learning_rate"] = 5e-6
+        training["scheduler_step_size"] = 4
+        training["scheduler_gamma"] = 0.5
+        if stage_index == 1:
+            training["pretrained_experiment_dir"] = (
+                "results/phase7d_groupb_1p9_ssfusion_activation_ablation/"
+                "phase7d_gb19_coh_g1_s1_ssfusion_antirect_backbone3x3"
+            )
+        else:
+            training["pretrained_experiment_dir"] = (
+                "results/phase7f_groupb_1p9_mixed_condition_finetune/"
+                f"{get_stage_experiment_name(stage_index - 1)}"
+            )
+        training["pretrained_method_name"] = "esprit"
 
-    report = template["report"]
-    report["write_summary_csv"] = False
-    report["markdown_output"] = ""
+        report = template["report"]
+        report["write_summary_csv"] = False
+        report["markdown_output"] = ""
 
-    target_path = generated_templates_dir / f"{PHASE7F_TRAIN_EXPERIMENTS[0]}.json"
-    with target_path.open("w", encoding="utf-8") as handle:
-        json.dump(template, handle, indent=2)
-        handle.write("\n")
+        target_path = generated_templates_dir / f"{stage_name}.json"
+        with target_path.open("w", encoding="utf-8") as handle:
+            json.dump(template, handle, indent=2)
+            handle.write("\n")
+    return stage_experiments
 
 
 def ensure_phase7f_test_templates(
@@ -256,7 +291,7 @@ def ensure_phase7f_test_templates(
         "source_model": {
             "experiment_dir": (
                 "results/phase7f_groupb_1p9_mixed_condition_finetune/"
-                "phase7f_gb19_mixed_antirect_finetune_360k"
+                f"{get_final_stage_experiment_name()}"
             ),
             "method_name": "esprit",
             "reference_rmse_deg": float(phase7d_metrics["rmse_deg"]),
@@ -299,7 +334,10 @@ def ensure_phase7f_test_templates(
                 "Physical spacing: 1.9 lambda",
                 "Model family: SS(2/3 x 3) -> LRMC -> width-controlled anti-rectifier spatial fusion -> SubspaceNet backbone 3x3 -> ESPRIT",
                 "Initialization: fine-tune from the best Phase 7D checkpoint",
-                "Mixed dataset size: 360,000 total samples",
+                "Training schedule: 8 sequential fine-tuning stages",
+                "Per-stage mixed dataset size: 45,000 total samples",
+                "Per-stage split: 40,500 training / 4,500 test samples",
+                "Approximate total samples seen across stages: 360,000",
                 "Coherence weighting: 60% coherent, 40% non-coherent",
                 "Evaluation set: same reused 40-cell grid as Phase 7E",
                 "Primary metric: horizontal-angle RMSE in degrees",
@@ -321,21 +359,10 @@ def main():
     train_templates_dir = (repo_root / args.train_templates_dir).resolve()
     test_templates_dir = (repo_root / args.test_templates_dir).resolve()
 
-    ensure_phase7f_training_templates(repo_root, train_templates_dir, args.seed)
+    stage_experiments = ensure_phase7f_training_templates(
+        repo_root, train_templates_dir, args.seed
+    )
     ensure_phase7f_test_templates(repo_root, test_templates_dir, args.seed)
-
-    train_command = [
-        sys.executable,
-        str(repo_root / "run_ablation.py"),
-        "--templates-dir",
-        str(Path(args.train_templates_dir).as_posix()),
-        "--experiments",
-        ",".join(PHASE7F_TRAIN_EXPERIMENTS),
-        "--seed",
-        str(args.seed),
-        "--results-dir",
-        args.results_dir,
-    ]
     test_command = [
         sys.executable,
         str(repo_root / "run_test.py"),
@@ -354,8 +381,28 @@ def main():
         "followed by reused-grid evaluation"
     )
     print("Results will be written under:", args.results_dir)
-    print("Training command:", " ".join(train_command))
-    subprocess.run(train_command, check=True)
+    print(
+        "Staged training schedule:",
+        f"{PHASE7F_STAGE_COUNT} stages x {PHASE7F_STAGE_SAMPLES:,} samples",
+    )
+    for stage_index, experiment_name in enumerate(stage_experiments, start=1):
+        train_command = [
+            sys.executable,
+            str(repo_root / "run_ablation.py"),
+            "--templates-dir",
+            str(Path(args.train_templates_dir).as_posix()),
+            "--experiments",
+            experiment_name,
+            "--seed",
+            str(args.seed + stage_index - 1),
+            "--results-dir",
+            args.results_dir,
+        ]
+        print(
+            f"Training stage {stage_index}/{PHASE7F_STAGE_COUNT}:",
+            " ".join(train_command),
+        )
+        subprocess.run(train_command, check=True)
     print("Evaluation command:", " ".join(test_command))
     subprocess.run(test_command, check=True)
 

@@ -1,0 +1,34 @@
+{
+  "template_name": "phase7f_gb19_mixed_antirect_finetune_stage07_45k",
+  "method_name": "esprit",
+  "rmse_deg": 0.5189244861988525,
+  "seed": 48,
+  "loss_measure": "rmse_deg",
+  "train_loss": [
+    0.012971480327331931,
+    0.012758072203369763,
+    0.012745398171371639,
+    0.01267005917076177,
+    0.012588967710191289,
+    0.012523607444378483
+  ],
+  "valid_loss": [
+    0.009175362779946048,
+    0.009114816297457714,
+    0.009015289202713512,
+    0.00907267734949222,
+    0.0088997153527163,
+    0.008889048161736407
+  ],
+  "checkpoint_dir": "D:\\workspace1\\SubspaceNet\\results\\phase7f_groupb_1p9_mixed_condition_finetune\\phase7f_gb19_mixed_antirect_finetune_stage07_45k\\esprit\\checkpoints",
+  "pretrained_checkpoint_path": "D:\\workspace1\\SubspaceNet\\results\\phase7f_groupb_1p9_mixed_condition_finetune\\phase7f_gb19_mixed_antirect_finetune_stage06_45k\\esprit\\checkpoints\\SubspaceNetSSFusionAntiRectEspritPhase7d_M=2_T=40_SNR_1_tau=8_NarrowBand_diff_method=esprit_coherent_eta=0_bias=0_tpl=phase7f_gb19_mixed_antirect_finetune_stage06_45k_13e1389bf1fa_sv_noise=0",
+  "avg_fused_covariance_norm": 641.3246223586135,
+  "avg_fused_diagonal_mean_real": -20.37287353944269,
+  "avg_input_branch_norms": [
+    3542.711100798077,
+    3597.011193863339,
+    3599.5083555194005
+  ],
+  "fusion_kernel_type": "3x3_spatial_antirect_width_controlled",
+  "subspacenet_backbone_kernel_size": 3
+}
