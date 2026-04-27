@@ -434,6 +434,15 @@ Current interpretation after the Phase 7D activation ablation:
 - current working interpretation: sign-preserving activation inside the covariance-fusion block matters materially in this hard coherent regime, and the earlier Phase 7C result was limited not only by backbone receptive field but also by information loss inside the ReLU-based fusion block
 - current best single learned result in the primary coherent hard cell is now the width-controlled anti-rectifier spatial-fusion model with the `3x3` backbone
 
+Current interpretation after the Phase 7E transfer study:
+- the Phase `7D` anti-rectifier fusion model reproduces its own source cell well on reused test data, reaching about `0.3563 deg` on coherent `1 deg`, `1 dB`, which is essentially the same as its original hard-cell result
+- it also transfers surprisingly well to the non-coherent `1 deg`, `1 dB` corner, reaching about `0.3337 deg`, which is even slightly better than its coherent source-cell RMSE
+- however, broad transfer across the full fixed-gap / SNR grid is weak: coherent OOD mean RMSE is about `2.13 deg`, non-coherent transfer mean RMSE is about `1.68 deg`, and most cells away from the training corner are much worse than direct per-cell learned models
+- coherent transfer remains useful mainly in the very hardest low-gap corner; once gap or SNR moves into easier regimes, the transferred model usually underperforms the direct learned references badly and often also loses to the best classical Phase 6 control
+- non-coherent transfer shows the same pattern even more clearly: outside the `1 deg`, `1 dB` corner and a few nearby cells, the transferred model is much worse than both the direct learned non-coherent models and the strong classical non-coherent controls
+- current working interpretation: the Phase `7D` model is a strong hard-cell specialist rather than a broadly robust Group B default, so wider deployment will likely require mixed-cell or mixed-regime training rather than zero-shot transfer from the single coherent hard cell
+- runtime is very stable across the reused grid at roughly `0.0163 s` to `0.0169 s` per sample for the full preprocessing-plus-inference path, so the main limitation exposed by Phase `7E` is generalization quality rather than runtime instability
+
 ### Current paper-scale training configuration
 
 The large-sample runs use:
@@ -621,8 +630,13 @@ Current repo style prefers:
 20. Phase 7D then sharpened the interpretation again. When the `3x3` spatial-fusion model replaced plain `ReLU` with a width-controlled anti-rectifier, its RMSE improved from about `0.4118 deg` to about `0.3592 deg`, beating both the ReLU spatial-fusion `3x3` reference and the plain `SS(3/3)` `3x3` baseline at about `0.4087 deg`.
 21. This Phase 7D result is important because the anti-rectifier comparison was intentionally width-controlled rather than implemented as a naive doubled-width expansion. That makes the improvement much stronger evidence that sign-preserving activation inside the covariance-fusion block is genuinely useful in the primary hard coherent cell, rather than the gain being mainly a by-product of increased hidden capacity.
 22. The learned SS-fusion path is therefore no longer just promising but structurally reinforced. The current best configuration in the primary hard coherent cell is now `SS(2/3 x 3) -> LRMC -> width-controlled anti-rectifier spatial fusion -> SubspaceNet(3x3) -> ESPRIT`.
-23. Root-MUSIC remains the most fragile component in both classical and learned forms and should still be treated as experimental unless it is the explicit object of study.
-24. The experiment framework is now mature enough that future work should be targeted:
+23. Phase 7E then tested whether this strongest model generalizes when transferred without retraining across the reused Phase 6 coherent and non-coherent fixed-gap / SNR grids. The answer is mixed but clear: it reproduces the coherent source cell at about `0.3563 deg` and transfers surprisingly well to the non-coherent `1 deg`, `1 dB` corner at about `0.3337 deg`, but broad zero-shot transfer across the rest of the grid is weak.
+24. In coherent transfer, the model still strongly beats the classical controls in the hardest low-gap corner, but its RMSE rises to about `0.96 - 2.72 deg` across the remaining reused coherent cells and is usually much worse than direct per-cell learned models. This means the model has learned something real about the hard coherent boundary, but not a broadly reusable solution over the whole coherent grid.
+25. In non-coherent transfer, the picture is even less favorable as a general-purpose default. Outside the `1 deg`, `1 dB` corner and a few nearby cells, the transferred model is usually much worse than both the direct learned non-coherent references and the strong classical non-coherent controls. This indicates that coherence-type shift remains a major generalization boundary for the current single-cell-trained model.
+26. Phase 7E also shows that runtime is not the issue: the full preprocessing-plus-inference path stays very stable at about `0.0163 s` to `0.0169 s` per sample across the reused grid. The limiting factor is therefore transfer quality, not computational volatility.
+27. The current best interpretation is that the anti-rectifier fusion model is the best available hard-cell specialist, not yet a broad Group B default. If broader robustness is the next goal, the most justified next step is mixed-cell or mixed-regime training rather than assuming that the best single-cell model will transfer cleanly.
+28. Root-MUSIC remains the most fragile component in both classical and learned forms and should still be treated as experimental unless it is the explicit object of study.
+29. The experiment framework is now mature enough that future work should be targeted:
    - coherent low-separation Group B, especially `1 - 2 deg`
    - combined hard regimes such as low-separation plus low-snapshot
    - focused SubspaceNet-ESPRIT improvements in the hard coherent cells
@@ -630,3 +644,4 @@ Current repo style prefers:
    - reduced-SS follow-up centered on the best coherent `2-of-3` row pair rather than treating all two-subarray variants as equivalent
    - learned SS-fusion follow-up that checks whether the new anti-rectifier spatial-fusion gain persists across the next coherent hard cells
    - structure-aware SS-fusion follow-up that clarifies whether the best next model should use anti-rectifier spatial fusion, channel-only fusion, or more explicitly constrained weighted fusion
+   - mixed-cell or mixed-regime training follow-up that tests whether the Phase `7D` hard-cell specialist can be turned into a genuinely transferable Group B model

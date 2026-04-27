@@ -29,6 +29,9 @@ Attributes:
 """
 
 # Imports
+import copy
+import hashlib
+import json
 import torch
 import numpy as np
 import itertools
@@ -367,6 +370,357 @@ def create_dataset(
             )
 
     return model_dataset, generic_dataset, samples_model
+
+
+def _system_model_params_from_template_dict(template: dict):
+    params = SystemModelParams()
+    for name, value in template.get("system_model", {}).items():
+        params.set_parameter(name, value)
+    params.set_parameter("template_name", template.get("template_name"))
+    return params
+
+
+def _generate_single_sample(
+    system_model_params: SystemModelParams,
+    model_type: str,
+    tau: int,
+):
+    samples_model = Samples(system_model_params)
+    if _is_2d_geometry(system_model_params):
+        doa_pairs = _sample_2d_doa_pairs(system_model_params)
+        samples_model.set_doa_2d(doa_pairs)
+    else:
+        doa_values = _sample_constrained_angles(
+            count=int(system_model_params.M),
+            lower=float(getattr(system_model_params, "doa_min", -90.0)),
+            upper=float(getattr(system_model_params, "doa_max", 90.0)),
+            resolution=float(getattr(system_model_params, "doa_resolution", 0.01)),
+            min_gap=float(getattr(system_model_params, "min_doa_gap", 15.0)),
+            fixed_gap=getattr(system_model_params, "fixed_doa_gap", None),
+        )
+        samples_model.set_doa(doa_values)
+
+    X = torch.tensor(
+        samples_model.samples_creation(
+            noise_mean=0, noise_variance=1, signal_mean=0, signal_variance=1
+        )[0],
+        dtype=torch.complex64,
+    )
+    if model_type.startswith("SubspaceNet"):
+        X_model = build_subspacenet_input(
+            X=X,
+            system_model_params=system_model_params,
+            tau=tau,
+            model_type=model_type,
+        )
+    elif model_type.startswith("DeepCNN"):
+        X_model = create_cov_tensor(X)
+    else:
+        X_model = X
+    Y = torch.tensor(samples_model.doa, dtype=torch.float64)
+    return (X_model, Y), (X, Y)
+
+
+def _convert_generic_dataset_to_model_dataset(
+    generic_dataset: list,
+    system_model_params: SystemModelParams,
+    model_type: str,
+    tau: int,
+):
+    model_dataset = []
+    for X, Y in generic_dataset:
+        X_model = build_subspacenet_input(
+            X=X,
+            system_model_params=system_model_params,
+            tau=tau,
+            model_type=model_type,
+        )
+        model_dataset.append((X_model, Y))
+    return model_dataset
+
+
+def _sample_from_generic_dataset(
+    generic_dataset: list,
+    sample_count: int,
+):
+    if sample_count <= 0:
+        return []
+    if sample_count <= len(generic_dataset):
+        indices = np.random.choice(len(generic_dataset), size=sample_count, replace=False)
+    else:
+        indices = np.random.choice(len(generic_dataset), size=sample_count, replace=True)
+    return [generic_dataset[int(index)] for index in indices]
+
+
+def _mixed_dataset_cache_key(
+    system_model_params: SystemModelParams,
+    dataset_settings: dict,
+    model_type: str,
+    tau: int,
+):
+    payload = {
+        "template_name": getattr(system_model_params, "template_name", None),
+        "signal_type": getattr(system_model_params, "signal_type", None),
+        "array_spacing": getattr(system_model_params, "array_spacing", None),
+        "geometry_name": getattr(system_model_params, "geometry_name", None),
+        "model_type": model_type,
+        "tau": tau,
+        "dataset": dataset_settings,
+    }
+    raw = json.dumps(payload, sort_keys=True, ensure_ascii=True)
+    return hashlib.sha1(raw.encode("utf-8")).hexdigest()[:12]
+
+
+def _mixed_dataset_file_paths(datasets_path: Path, model_type: str, cache_key: str):
+    train_model = datasets_path / "train" / f"{model_type}_MixedTrain_{cache_key}.pt"
+    test_model = datasets_path / "test" / f"{model_type}_MixedTest_{cache_key}.pt"
+    test_generic = datasets_path / "test" / f"Generic_MixedTest_{cache_key}.pt"
+    metadata = datasets_path / "test" / f"mixed_samples_model_{cache_key}.pt"
+    return train_model, test_model, test_generic, metadata
+
+
+def load_mixed_datasets(
+    system_model_params: SystemModelParams,
+    model_type: str,
+    tau: int,
+    dataset_settings: dict,
+    datasets_path: Path,
+    is_training: bool = False,
+):
+    cache_key = _mixed_dataset_cache_key(
+        system_model_params=system_model_params,
+        dataset_settings=dataset_settings,
+        model_type=model_type,
+        tau=tau,
+    )
+    train_model, test_model, test_generic, metadata = _mixed_dataset_file_paths(
+        datasets_path, model_type, cache_key
+    )
+    datasets = []
+    if is_training:
+        if not train_model.exists():
+            raise Exception("load_mixed_datasets: Training dataset doesn't exist")
+        datasets.append(read_data(train_model))
+    if not test_model.exists():
+        raise Exception("load_mixed_datasets: Test dataset doesn't exist")
+    if not test_generic.exists():
+        raise Exception("load_mixed_datasets: Generic test dataset doesn't exist")
+    if not metadata.exists():
+        raise Exception("load_mixed_datasets: Mixed dataset metadata doesn't exist")
+    datasets.append(read_data(test_model))
+    datasets.append(read_data(test_generic))
+    datasets.append(read_data(metadata))
+    return datasets
+
+
+def _load_or_create_generic_dataset_from_template(
+    template_path: Path,
+    phase: str,
+):
+    with template_path.open("r", encoding="utf-8-sig") as handle:
+        template = json.load(handle)
+    template["template_name"] = template_path.stem
+    system_model_params = _system_model_params_from_template_dict(template)
+    dataset_settings = template["dataset"]
+    datasets_path = template_path.parents[4] / "data" / "datasets" / template["scenario_data_path"]
+    sample_count = (
+        dataset_settings["samples_size"]
+        if phase == "train"
+        else int(dataset_settings["train_test_ratio"] * dataset_settings["samples_size"])
+    )
+    generic_filenames = get_dataset_filename_candidates(
+        "Generic_DataSet", system_model_params, sample_count
+    )
+    candidate_paths = [datasets_path / phase / name for name in generic_filenames]
+    try:
+        return read_first_existing(candidate_paths)
+    except FileNotFoundError:
+        (datasets_path / "train").mkdir(parents=True, exist_ok=True)
+        (datasets_path / "test").mkdir(parents=True, exist_ok=True)
+        _, generic_dataset, _ = create_dataset(
+            system_model_params=system_model_params,
+            samples_size=sample_count,
+            model_type="Classical",
+            tau=template.get("model", {}).get("tau", 8),
+            save_datasets=True,
+            datasets_path=datasets_path,
+            true_doa=None,
+            phase=phase,
+        )
+        return generic_dataset
+
+
+def _normalized_split_counts(total_count: int, test_ratio: float):
+    test_count = int(round(total_count * test_ratio))
+    train_count = int(total_count - test_count)
+    return train_count, test_count
+
+
+def _weighted_choice(weight_mapping: dict):
+    values = list(weight_mapping.keys())
+    weights = np.asarray([float(weight_mapping[key]) for key in values], dtype=float)
+    weights = weights / np.sum(weights)
+    return values[int(np.random.choice(len(values), p=weights))]
+
+
+def _generate_weighted_random_component(
+    count: int,
+    base_system_model_params: SystemModelParams,
+    model_type: str,
+    tau: int,
+    weighted_random_config: dict,
+    split_name: str,
+):
+    model_dataset = []
+    generic_dataset = []
+    coherence_weights = weighted_random_config.get("coherence_weights", {})
+    snr_weights = weighted_random_config.get("snr_weights", {})
+    gap_group_weights = weighted_random_config.get("gap_group_weights", [])
+    if not coherence_weights or not snr_weights or not gap_group_weights:
+        raise ValueError(
+            "_generate_weighted_random_component: coherence_weights, snr_weights, "
+            "and gap_group_weights are required"
+        )
+    gap_group_probabilities = np.asarray(
+        [float(group["weight"]) for group in gap_group_weights], dtype=float
+    )
+    gap_group_probabilities = gap_group_probabilities / np.sum(gap_group_probabilities)
+
+    for _ in tqdm(range(count), desc=f"mixed-random::{split_name}"):
+        params = copy.deepcopy(base_system_model_params)
+        coherence_key = _weighted_choice(coherence_weights)
+        params.set_parameter(
+            "signal_nature",
+            "coherent" if coherence_key == "coherent" else "non-coherent",
+        )
+        params.set_parameter("snr", float(_weighted_choice(snr_weights)))
+        group_index = int(np.random.choice(len(gap_group_weights), p=gap_group_probabilities))
+        gap_group = gap_group_weights[group_index]
+        gaps = [float(value) for value in gap_group.get("gaps", [])]
+        if not gaps:
+            raise ValueError("_generate_weighted_random_component: gap group missing gaps")
+        if len(gaps) == 1:
+            selected_gap = float(gaps[0])
+        else:
+            selected_gap = float(np.round(np.random.uniform(min(gaps), max(gaps)), 2))
+        params.set_parameter("min_doa_gap", selected_gap)
+        params.set_parameter("fixed_doa_gap", selected_gap)
+        model_sample, generic_sample = _generate_single_sample(
+            system_model_params=params,
+            model_type=model_type,
+            tau=tau,
+        )
+        model_dataset.append(model_sample)
+        generic_dataset.append(generic_sample)
+    return model_dataset, generic_dataset
+
+
+def create_mixed_dataset(
+    system_model_params: SystemModelParams,
+    dataset_settings: dict,
+    model_type: str,
+    tau: int,
+    save_datasets: bool = False,
+    datasets_path: Path = None,
+):
+    mixed_config = dataset_settings.get("mixed_dataset")
+    if mixed_config is None:
+        raise ValueError("create_mixed_dataset: dataset_settings.mixed_dataset is required")
+    train_ratio = 1.0 - float(dataset_settings.get("train_test_ratio", 0.2))
+    test_ratio = float(dataset_settings.get("train_test_ratio", 0.2))
+
+    train_model_dataset = []
+    test_model_dataset = []
+    test_generic_dataset = []
+    metadata = {
+        "mixed_dataset": mixed_config,
+        "train_samples_size": 0,
+        "test_samples_size": 0,
+    }
+
+    for cell_config in mixed_config.get("stratified_cells", []):
+        total_samples = int(cell_config["total_samples"])
+        train_count, test_count = _normalized_split_counts(total_samples, test_ratio)
+        template_path = Path(cell_config["template_path"])
+        train_generic_source = _load_or_create_generic_dataset_from_template(
+            template_path, phase="train"
+        )
+        test_generic_source = _load_or_create_generic_dataset_from_template(
+            template_path, phase="test"
+        )
+        sampled_train_generic = _sample_from_generic_dataset(
+            train_generic_source, train_count
+        )
+        sampled_test_generic = _sample_from_generic_dataset(
+            test_generic_source, test_count
+        )
+        train_model_dataset.extend(
+            _convert_generic_dataset_to_model_dataset(
+                sampled_train_generic,
+                system_model_params=system_model_params,
+                model_type=model_type,
+                tau=tau,
+            )
+        )
+        converted_test_model = _convert_generic_dataset_to_model_dataset(
+            sampled_test_generic,
+            system_model_params=system_model_params,
+            model_type=model_type,
+            tau=tau,
+        )
+        test_model_dataset.extend(converted_test_model)
+        test_generic_dataset.extend(sampled_test_generic)
+        metadata["train_samples_size"] += len(sampled_train_generic)
+        metadata["test_samples_size"] += len(sampled_test_generic)
+
+    weighted_random_config = mixed_config.get("weighted_random")
+    if weighted_random_config is not None:
+        total_random_samples = int(weighted_random_config["total_samples"])
+        random_train_count, random_test_count = _normalized_split_counts(
+            total_random_samples, test_ratio
+        )
+        random_train_model, _ = _generate_weighted_random_component(
+            count=random_train_count,
+            base_system_model_params=system_model_params,
+            model_type=model_type,
+            tau=tau,
+            weighted_random_config=weighted_random_config,
+            split_name="train",
+        )
+        random_test_model, random_test_generic = _generate_weighted_random_component(
+            count=random_test_count,
+            base_system_model_params=system_model_params,
+            model_type=model_type,
+            tau=tau,
+            weighted_random_config=weighted_random_config,
+            split_name="test",
+        )
+        train_model_dataset.extend(random_train_model)
+        test_model_dataset.extend(random_test_model)
+        test_generic_dataset.extend(random_test_generic)
+        metadata["train_samples_size"] += len(random_train_model)
+        metadata["test_samples_size"] += len(random_test_model)
+
+    if save_datasets:
+        cache_key = _mixed_dataset_cache_key(
+            system_model_params=system_model_params,
+            dataset_settings=dataset_settings,
+            model_type=model_type,
+            tau=tau,
+        )
+        train_model, test_model, test_generic, metadata_path = _mixed_dataset_file_paths(
+            datasets_path, model_type, cache_key
+        )
+        ensure_train = train_model.parent
+        ensure_test = test_model.parent
+        ensure_train.mkdir(parents=True, exist_ok=True)
+        ensure_test.mkdir(parents=True, exist_ok=True)
+        torch.save(obj=train_model_dataset, f=train_model)
+        torch.save(obj=test_model_dataset, f=test_model)
+        torch.save(obj=test_generic_dataset, f=test_generic)
+        torch.save(obj=metadata, f=metadata_path)
+
+    return train_model_dataset, test_model_dataset, test_generic_dataset, metadata
 
 
 # def read_data(Data_path: str) -> torch.Tensor:

@@ -19,7 +19,7 @@ import torch
 from tqdm import tqdm
 
 from src.criterions import RMSPELoss
-from src.data_handler import create_dataset, load_datasets
+from src.data_handler import create_dataset, create_mixed_dataset, load_datasets, load_mixed_datasets
 from src.dataset_template import build_system_model_params_from_template
 from src.methods import DBF, Esprit, MUSIC, RootMUSIC
 from src.models import ModelGenerator
@@ -148,6 +148,11 @@ def save_json(path: Path, payload: Dict):
         json.dump(payload, handle, indent=2, default=convert)
 
 
+def load_json(path: Path):
+    with path.open("r", encoding="utf-8-sig") as handle:
+        return json.load(handle)
+
+
 def load_existing_result(result_dir: Path, template: Dict, method_name: str) -> Optional[Dict]:
     metrics_path = result_dir / "metrics.json"
     if not metrics_path.exists():
@@ -215,6 +220,74 @@ def prepare_datasets(
     system_model_params.set_parameter("template_name", template["template_name"])
     samples_size = dataset_settings["samples_size"]
     train_test_ratio = dataset_settings["train_test_ratio"]
+    mixed_dataset_config = dataset_settings.get("mixed_dataset")
+
+    if mixed_dataset_config is not None:
+        force_recreate = bool(commands.get("FORCE_RECREATE_DATA", False))
+        prefer_cached_data = bool(
+            commands.get("LOAD_DATA", False)
+            or commands.get("CACHE_DATASET", False)
+            or commands.get("CREATE_DATA", False)
+        ) and not force_recreate
+
+        loaded = None
+        if prefer_cached_data:
+            try:
+                loaded = load_mixed_datasets(
+                    system_model_params=system_model_params,
+                    model_type=model_type,
+                    tau=tau,
+                    dataset_settings=dataset_settings,
+                    datasets_path=datasets_path,
+                    is_training=need_training_split,
+                )
+                print(
+                    f"Using cached mixed dataset for {template['template_name']} from {datasets_path}"
+                )
+            except Exception:
+                loaded = None
+
+        if loaded is None and commands.get("LOAD_DATA", False) and not commands.get(
+            "CREATE_DATA", False
+        ):
+            raise Exception(
+                f"prepare_datasets: cached mixed dataset requested for {template['template_name']}, but it does not exist"
+            )
+
+        if loaded is None and commands.get("CREATE_DATA", False):
+            (
+                train_dataset,
+                test_dataset,
+                generic_test_dataset,
+                samples_model,
+            ) = create_mixed_dataset(
+                system_model_params=system_model_params,
+                dataset_settings=dataset_settings,
+                model_type=model_type,
+                tau=tau,
+                save_datasets=True,
+                datasets_path=datasets_path,
+            )
+            if not need_training_split:
+                train_dataset = None
+            return train_dataset, test_dataset, generic_test_dataset, samples_model, datasets_path
+
+        if loaded is None:
+            loaded = load_mixed_datasets(
+                system_model_params=system_model_params,
+                model_type=model_type,
+                tau=tau,
+                dataset_settings=dataset_settings,
+                datasets_path=datasets_path,
+                is_training=need_training_split,
+            )
+
+        if need_training_split:
+            train_dataset, test_dataset, generic_test_dataset, samples_model = loaded
+        else:
+            test_dataset, generic_test_dataset, samples_model = loaded
+            train_dataset = None
+        return train_dataset, test_dataset, generic_test_dataset, samples_model, datasets_path
 
     force_recreate = bool(commands.get("FORCE_RECREATE_DATA", False))
     prefer_cached_data = bool(
@@ -286,6 +359,45 @@ def prepare_datasets(
         test_dataset, generic_test_dataset, samples_model = loaded
         train_dataset = None
     return train_dataset, test_dataset, generic_test_dataset, samples_model, datasets_path
+
+
+def resolve_pretrained_checkpoint(repo_root: Path, training_settings: Dict):
+    experiment_dir_value = training_settings.get("pretrained_experiment_dir")
+    if not experiment_dir_value:
+        return None
+    experiment_dir = Path(experiment_dir_value)
+    if not experiment_dir.is_absolute():
+        experiment_dir = (repo_root / experiment_dir).resolve()
+    method_name = training_settings.get("pretrained_method_name", "esprit")
+    resolved_template_path = experiment_dir / "resolved_template.json"
+    metrics_path = experiment_dir / method_name / "metrics.json"
+    metrics = load_json(metrics_path)
+    checkpoint_dir = Path(metrics["checkpoint_dir"])
+    if not checkpoint_dir.is_absolute():
+        checkpoint_dir = checkpoint_dir.resolve()
+    source_template = load_json(resolved_template_path)
+    source_system_model_params = build_system_model_params_from_template(source_template)
+    source_system_model_params.set_parameter(
+        "template_name", source_template["template_name"]
+    )
+    source_model_config = (
+        ModelGenerator()
+        .set_model_type(source_template["model"]["model_type"])
+        .set_diff_method(source_template["model"]["diff_method"])
+        .set_tau(int(source_template["model"]["tau"]))
+        .set_model(source_system_model_params)
+    )
+    checkpoint_name = get_simulation_filename(
+        source_system_model_params, source_model_config
+    )
+    checkpoint_path = checkpoint_dir / checkpoint_name
+    if not checkpoint_path.exists():
+        candidates = [path for path in checkpoint_dir.iterdir() if path.is_file()]
+        if not candidates:
+            raise FileNotFoundError(f"No checkpoint files found in {checkpoint_dir}")
+        candidates.sort(key=lambda path: path.stat().st_mtime, reverse=True)
+        checkpoint_path = candidates[0]
+    return checkpoint_path
 
 
 def plot_loss_curves(train_loss: List[float], valid_loss: List[float], output_path: Path):
@@ -496,6 +608,9 @@ def train_subspacenet_variant(
         )
         .set_criterion()
     )
+    pretrained_checkpoint = resolve_pretrained_checkpoint(repo_root, training_settings)
+    if pretrained_checkpoint is not None:
+        simulation_parameters.load_model(pretrained_checkpoint)
 
     model, train_loss, valid_loss = train(
         training_parameters=simulation_parameters,
@@ -516,6 +631,9 @@ def train_subspacenet_variant(
             "train_loss": train_loss,
             "valid_loss": valid_loss,
             "checkpoint_dir": str(checkpoint_dir),
+            "pretrained_checkpoint_path": (
+                str(pretrained_checkpoint) if pretrained_checkpoint is not None else None
+            ),
             **model_eval_summary,
         },
     )

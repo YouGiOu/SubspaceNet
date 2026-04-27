@@ -1,0 +1,780 @@
+{
+  "description": "Phase 7F evaluates the mixed-condition fine-tuned anti-rectifier fusion model on the same reused Phase 7E 40-cell grid.",
+  "experiment_type": "subspacenet_transfer_test",
+  "seed": 42,
+  "commands": {
+    "GENERATE_MISSING_DATA": true,
+    "SAVE_GENERATED_DATA": true
+  },
+  "source_model": {
+    "experiment_dir": "results/phase7f_groupb_1p9_mixed_condition_finetune/phase7f_gb19_mixed_antirect_finetune_360k",
+    "method_name": "esprit",
+    "reference_rmse_deg": 0.35922418587611504
+  },
+  "evaluation_cells": [
+    {
+      "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase6_groupb_1p9_coherent_fixed_gap_snr_grid\\phase6_groupb_1p9_coherent_subspacenet_esprit_gap1_snr1.json",
+      "result_name": "phase7f_gb19_coh_g1_s1_mixedft",
+      "method_name": "esprit",
+      "coherence_key": "coherent",
+      "coherence_label": "coherent",
+      "gap_deg": 1,
+      "snr_db": 1,
+      "split": "in_domain_anchor",
+      "bucket_labels": [
+        "in_domain_anchor"
+      ],
+      "retention_priority": true,
+      "reference_schemes": {
+        "phase7e": "phase7e_gb19_coh_g1_s1_antirect_transfer"
+      }
+    },
+    {
+      "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase6_groupb_1p9_coherent_fixed_gap_snr_grid\\phase6_groupb_1p9_coherent_subspacenet_esprit_gap1_snr5.json",
+      "result_name": "phase7f_gb19_coh_g1_s5_mixedft",
+      "method_name": "esprit",
+      "coherence_key": "coherent",
+      "coherence_label": "coherent",
+      "gap_deg": 1,
+      "snr_db": 5,
+      "split": "coherent_ood",
+      "bucket_labels": [
+        "coherent_ood",
+        "snr_shift_only"
+      ],
+      "retention_priority": false,
+      "reference_schemes": {
+        "phase7e": "phase7e_gb19_coh_g1_s5_antirect_transfer"
+      }
+    },
+    {
+      "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase6_groupb_1p9_coherent_fixed_gap_snr_grid\\phase6_groupb_1p9_coherent_subspacenet_esprit_gap1_snr10.json",
+      "result_name": "phase7f_gb19_coh_g1_s10_mixedft",
+      "method_name": "esprit",
+      "coherence_key": "coherent",
+      "coherence_label": "coherent",
+      "gap_deg": 1,
+      "snr_db": 10,
+      "split": "coherent_ood",
+      "bucket_labels": [
+        "coherent_ood",
+        "snr_shift_only"
+      ],
+      "retention_priority": false,
+      "reference_schemes": {
+        "phase7e": "phase7e_gb19_coh_g1_s10_antirect_transfer"
+      }
+    },
+    {
+      "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase6_groupb_1p9_coherent_fixed_gap_snr_grid\\phase6_groupb_1p9_coherent_subspacenet_esprit_gap1_snr15.json",
+      "result_name": "phase7f_gb19_coh_g1_s15_mixedft",
+      "method_name": "esprit",
+      "coherence_key": "coherent",
+      "coherence_label": "coherent",
+      "gap_deg": 1,
+      "snr_db": 15,
+      "split": "coherent_ood",
+      "bucket_labels": [
+        "coherent_ood",
+        "snr_shift_only"
+      ],
+      "retention_priority": false,
+      "reference_schemes": {
+        "phase7e": "phase7e_gb19_coh_g1_s15_antirect_transfer"
+      }
+    },
+    {
+      "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase6_groupb_1p9_coherent_fixed_gap_snr_grid\\phase6_groupb_1p9_coherent_subspacenet_esprit_gap2_snr1.json",
+      "result_name": "phase7f_gb19_coh_g2_s1_mixedft",
+      "method_name": "esprit",
+      "coherence_key": "coherent",
+      "coherence_label": "coherent",
+      "gap_deg": 2,
+      "snr_db": 1,
+      "split": "coherent_ood",
+      "bucket_labels": [
+        "coherent_ood",
+        "gap_shift_only"
+      ],
+      "retention_priority": true,
+      "reference_schemes": {
+        "phase7e": "phase7e_gb19_coh_g2_s1_antirect_transfer"
+      }
+    },
+    {
+      "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase6_groupb_1p9_coherent_fixed_gap_snr_grid\\phase6_groupb_1p9_coherent_subspacenet_esprit_gap2_snr5.json",
+      "result_name": "phase7f_gb19_coh_g2_s5_mixedft",
+      "method_name": "esprit",
+      "coherence_key": "coherent",
+      "coherence_label": "coherent",
+      "gap_deg": 2,
+      "snr_db": 5,
+      "split": "coherent_ood",
+      "bucket_labels": [
+        "coherent_ood",
+        "joint_gap_snr_shift"
+      ],
+      "retention_priority": true,
+      "reference_schemes": {
+        "phase7e": "phase7e_gb19_coh_g2_s5_antirect_transfer"
+      }
+    },
+    {
+      "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase6_groupb_1p9_coherent_fixed_gap_snr_grid\\phase6_groupb_1p9_coherent_subspacenet_esprit_gap2_snr10.json",
+      "result_name": "phase7f_gb19_coh_g2_s10_mixedft",
+      "method_name": "esprit",
+      "coherence_key": "coherent",
+      "coherence_label": "coherent",
+      "gap_deg": 2,
+      "snr_db": 10,
+      "split": "coherent_ood",
+      "bucket_labels": [
+        "coherent_ood",
+        "joint_gap_snr_shift"
+      ],
+      "retention_priority": false,
+      "reference_schemes": {
+        "phase7e": "phase7e_gb19_coh_g2_s10_antirect_transfer"
+      }
+    },
+    {
+      "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase6_groupb_1p9_coherent_fixed_gap_snr_grid\\phase6_groupb_1p9_coherent_subspacenet_esprit_gap2_snr15.json",
+      "result_name": "phase7f_gb19_coh_g2_s15_mixedft",
+      "method_name": "esprit",
+      "coherence_key": "coherent",
+      "coherence_label": "coherent",
+      "gap_deg": 2,
+      "snr_db": 15,
+      "split": "coherent_ood",
+      "bucket_labels": [
+        "coherent_ood",
+        "joint_gap_snr_shift"
+      ],
+      "retention_priority": false,
+      "reference_schemes": {
+        "phase7e": "phase7e_gb19_coh_g2_s15_antirect_transfer"
+      }
+    },
+    {
+      "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase6_groupb_1p9_coherent_fixed_gap_snr_grid\\phase6_groupb_1p9_coherent_subspacenet_esprit_gap3_snr1.json",
+      "result_name": "phase7f_gb19_coh_g3_s1_mixedft",
+      "method_name": "esprit",
+      "coherence_key": "coherent",
+      "coherence_label": "coherent",
+      "gap_deg": 3,
+      "snr_db": 1,
+      "split": "coherent_ood",
+      "bucket_labels": [
+        "coherent_ood",
+        "gap_shift_only"
+      ],
+      "retention_priority": false,
+      "reference_schemes": {
+        "phase7e": "phase7e_gb19_coh_g3_s1_antirect_transfer"
+      }
+    },
+    {
+      "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase6_groupb_1p9_coherent_fixed_gap_snr_grid\\phase6_groupb_1p9_coherent_subspacenet_esprit_gap3_snr5.json",
+      "result_name": "phase7f_gb19_coh_g3_s5_mixedft",
+      "method_name": "esprit",
+      "coherence_key": "coherent",
+      "coherence_label": "coherent",
+      "gap_deg": 3,
+      "snr_db": 5,
+      "split": "coherent_ood",
+      "bucket_labels": [
+        "coherent_ood",
+        "joint_gap_snr_shift"
+      ],
+      "retention_priority": false,
+      "reference_schemes": {
+        "phase7e": "phase7e_gb19_coh_g3_s5_antirect_transfer"
+      }
+    },
+    {
+      "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase6_groupb_1p9_coherent_fixed_gap_snr_grid\\phase6_groupb_1p9_coherent_subspacenet_esprit_gap3_snr10.json",
+      "result_name": "phase7f_gb19_coh_g3_s10_mixedft",
+      "method_name": "esprit",
+      "coherence_key": "coherent",
+      "coherence_label": "coherent",
+      "gap_deg": 3,
+      "snr_db": 10,
+      "split": "coherent_ood",
+      "bucket_labels": [
+        "coherent_ood",
+        "joint_gap_snr_shift"
+      ],
+      "retention_priority": false,
+      "reference_schemes": {
+        "phase7e": "phase7e_gb19_coh_g3_s10_antirect_transfer"
+      }
+    },
+    {
+      "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase6_groupb_1p9_coherent_fixed_gap_snr_grid\\phase6_groupb_1p9_coherent_subspacenet_esprit_gap3_snr15.json",
+      "result_name": "phase7f_gb19_coh_g3_s15_mixedft",
+      "method_name": "esprit",
+      "coherence_key": "coherent",
+      "coherence_label": "coherent",
+      "gap_deg": 3,
+      "snr_db": 15,
+      "split": "coherent_ood",
+      "bucket_labels": [
+        "coherent_ood",
+        "joint_gap_snr_shift"
+      ],
+      "retention_priority": false,
+      "reference_schemes": {
+        "phase7e": "phase7e_gb19_coh_g3_s15_antirect_transfer"
+      }
+    },
+    {
+      "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase6_groupb_1p9_coherent_fixed_gap_snr_grid\\phase6_groupb_1p9_coherent_subspacenet_esprit_gap4_snr1.json",
+      "result_name": "phase7f_gb19_coh_g4_s1_mixedft",
+      "method_name": "esprit",
+      "coherence_key": "coherent",
+      "coherence_label": "coherent",
+      "gap_deg": 4,
+      "snr_db": 1,
+      "split": "coherent_ood",
+      "bucket_labels": [
+        "coherent_ood",
+        "gap_shift_only"
+      ],
+      "retention_priority": false,
+      "reference_schemes": {
+        "phase7e": "phase7e_gb19_coh_g4_s1_antirect_transfer"
+      }
+    },
+    {
+      "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase6_groupb_1p9_coherent_fixed_gap_snr_grid\\phase6_groupb_1p9_coherent_subspacenet_esprit_gap4_snr5.json",
+      "result_name": "phase7f_gb19_coh_g4_s5_mixedft",
+      "method_name": "esprit",
+      "coherence_key": "coherent",
+      "coherence_label": "coherent",
+      "gap_deg": 4,
+      "snr_db": 5,
+      "split": "coherent_ood",
+      "bucket_labels": [
+        "coherent_ood",
+        "joint_gap_snr_shift"
+      ],
+      "retention_priority": false,
+      "reference_schemes": {
+        "phase7e": "phase7e_gb19_coh_g4_s5_antirect_transfer"
+      }
+    },
+    {
+      "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase6_groupb_1p9_coherent_fixed_gap_snr_grid\\phase6_groupb_1p9_coherent_subspacenet_esprit_gap4_snr10.json",
+      "result_name": "phase7f_gb19_coh_g4_s10_mixedft",
+      "method_name": "esprit",
+      "coherence_key": "coherent",
+      "coherence_label": "coherent",
+      "gap_deg": 4,
+      "snr_db": 10,
+      "split": "coherent_ood",
+      "bucket_labels": [
+        "coherent_ood",
+        "joint_gap_snr_shift"
+      ],
+      "retention_priority": false,
+      "reference_schemes": {
+        "phase7e": "phase7e_gb19_coh_g4_s10_antirect_transfer"
+      }
+    },
+    {
+      "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase6_groupb_1p9_coherent_fixed_gap_snr_grid\\phase6_groupb_1p9_coherent_subspacenet_esprit_gap4_snr15.json",
+      "result_name": "phase7f_gb19_coh_g4_s15_mixedft",
+      "method_name": "esprit",
+      "coherence_key": "coherent",
+      "coherence_label": "coherent",
+      "gap_deg": 4,
+      "snr_db": 15,
+      "split": "coherent_ood",
+      "bucket_labels": [
+        "coherent_ood",
+        "joint_gap_snr_shift"
+      ],
+      "retention_priority": false,
+      "reference_schemes": {
+        "phase7e": "phase7e_gb19_coh_g4_s15_antirect_transfer"
+      }
+    },
+    {
+      "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase6_groupb_1p9_coherent_fixed_gap_snr_grid\\phase6_groupb_1p9_coherent_subspacenet_esprit_gap5_snr1.json",
+      "result_name": "phase7f_gb19_coh_g5_s1_mixedft",
+      "method_name": "esprit",
+      "coherence_key": "coherent",
+      "coherence_label": "coherent",
+      "gap_deg": 5,
+      "snr_db": 1,
+      "split": "coherent_ood",
+      "bucket_labels": [
+        "coherent_ood",
+        "gap_shift_only"
+      ],
+      "retention_priority": false,
+      "reference_schemes": {
+        "phase7e": "phase7e_gb19_coh_g5_s1_antirect_transfer"
+      }
+    },
+    {
+      "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase6_groupb_1p9_coherent_fixed_gap_snr_grid\\phase6_groupb_1p9_coherent_subspacenet_esprit_gap5_snr5.json",
+      "result_name": "phase7f_gb19_coh_g5_s5_mixedft",
+      "method_name": "esprit",
+      "coherence_key": "coherent",
+      "coherence_label": "coherent",
+      "gap_deg": 5,
+      "snr_db": 5,
+      "split": "coherent_ood",
+      "bucket_labels": [
+        "coherent_ood",
+        "joint_gap_snr_shift"
+      ],
+      "retention_priority": false,
+      "reference_schemes": {
+        "phase7e": "phase7e_gb19_coh_g5_s5_antirect_transfer"
+      }
+    },
+    {
+      "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase6_groupb_1p9_coherent_fixed_gap_snr_grid\\phase6_groupb_1p9_coherent_subspacenet_esprit_gap5_snr10.json",
+      "result_name": "phase7f_gb19_coh_g5_s10_mixedft",
+      "method_name": "esprit",
+      "coherence_key": "coherent",
+      "coherence_label": "coherent",
+      "gap_deg": 5,
+      "snr_db": 10,
+      "split": "coherent_ood",
+      "bucket_labels": [
+        "coherent_ood",
+        "joint_gap_snr_shift"
+      ],
+      "retention_priority": false,
+      "reference_schemes": {
+        "phase7e": "phase7e_gb19_coh_g5_s10_antirect_transfer"
+      }
+    },
+    {
+      "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase6_groupb_1p9_coherent_fixed_gap_snr_grid\\phase6_groupb_1p9_coherent_subspacenet_esprit_gap5_snr15.json",
+      "result_name": "phase7f_gb19_coh_g5_s15_mixedft",
+      "method_name": "esprit",
+      "coherence_key": "coherent",
+      "coherence_label": "coherent",
+      "gap_deg": 5,
+      "snr_db": 15,
+      "split": "coherent_ood",
+      "bucket_labels": [
+        "coherent_ood",
+        "joint_gap_snr_shift"
+      ],
+      "retention_priority": false,
+      "reference_schemes": {
+        "phase7e": "phase7e_gb19_coh_g5_s15_antirect_transfer"
+      }
+    },
+    {
+      "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase6_groupb_1p9_noncoherent_fixed_gap_snr_grid\\phase6_groupb_1p9_noncoherent_subspacenet_esprit_gap1_snr1.json",
+      "result_name": "phase7f_gb19_noncoh_g1_s1_mixedft",
+      "method_name": "esprit",
+      "coherence_key": "noncoherent",
+      "coherence_label": "non-coherent",
+      "gap_deg": 1,
+      "snr_db": 1,
+      "split": "noncoherent_transfer",
+      "bucket_labels": [
+        "noncoherent_transfer",
+        "snr_shift_only",
+        "gap_shift_only",
+        "full_noncoherent_transfer"
+      ],
+      "retention_priority": true,
+      "reference_schemes": {
+        "phase7e": "phase7e_gb19_noncoh_g1_s1_antirect_transfer"
+      }
+    },
+    {
+      "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase6_groupb_1p9_noncoherent_fixed_gap_snr_grid\\phase6_groupb_1p9_noncoherent_subspacenet_esprit_gap1_snr5.json",
+      "result_name": "phase7f_gb19_noncoh_g1_s5_mixedft",
+      "method_name": "esprit",
+      "coherence_key": "noncoherent",
+      "coherence_label": "non-coherent",
+      "gap_deg": 1,
+      "snr_db": 5,
+      "split": "noncoherent_transfer",
+      "bucket_labels": [
+        "noncoherent_transfer",
+        "snr_shift_only",
+        "full_noncoherent_transfer"
+      ],
+      "retention_priority": false,
+      "reference_schemes": {
+        "phase7e": "phase7e_gb19_noncoh_g1_s5_antirect_transfer"
+      }
+    },
+    {
+      "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase6_groupb_1p9_noncoherent_fixed_gap_snr_grid\\phase6_groupb_1p9_noncoherent_subspacenet_esprit_gap1_snr10.json",
+      "result_name": "phase7f_gb19_noncoh_g1_s10_mixedft",
+      "method_name": "esprit",
+      "coherence_key": "noncoherent",
+      "coherence_label": "non-coherent",
+      "gap_deg": 1,
+      "snr_db": 10,
+      "split": "noncoherent_transfer",
+      "bucket_labels": [
+        "noncoherent_transfer",
+        "snr_shift_only",
+        "full_noncoherent_transfer"
+      ],
+      "retention_priority": false,
+      "reference_schemes": {
+        "phase7e": "phase7e_gb19_noncoh_g1_s10_antirect_transfer"
+      }
+    },
+    {
+      "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase6_groupb_1p9_noncoherent_fixed_gap_snr_grid\\phase6_groupb_1p9_noncoherent_subspacenet_esprit_gap1_snr15.json",
+      "result_name": "phase7f_gb19_noncoh_g1_s15_mixedft",
+      "method_name": "esprit",
+      "coherence_key": "noncoherent",
+      "coherence_label": "non-coherent",
+      "gap_deg": 1,
+      "snr_db": 15,
+      "split": "noncoherent_transfer",
+      "bucket_labels": [
+        "noncoherent_transfer",
+        "snr_shift_only",
+        "full_noncoherent_transfer"
+      ],
+      "retention_priority": false,
+      "reference_schemes": {
+        "phase7e": "phase7e_gb19_noncoh_g1_s15_antirect_transfer"
+      }
+    },
+    {
+      "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase6_groupb_1p9_noncoherent_fixed_gap_snr_grid\\phase6_groupb_1p9_noncoherent_subspacenet_esprit_gap2_snr1.json",
+      "result_name": "phase7f_gb19_noncoh_g2_s1_mixedft",
+      "method_name": "esprit",
+      "coherence_key": "noncoherent",
+      "coherence_label": "non-coherent",
+      "gap_deg": 2,
+      "snr_db": 1,
+      "split": "noncoherent_transfer",
+      "bucket_labels": [
+        "noncoherent_transfer",
+        "gap_shift_only",
+        "full_noncoherent_transfer"
+      ],
+      "retention_priority": false,
+      "reference_schemes": {
+        "phase7e": "phase7e_gb19_noncoh_g2_s1_antirect_transfer"
+      }
+    },
+    {
+      "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase6_groupb_1p9_noncoherent_fixed_gap_snr_grid\\phase6_groupb_1p9_noncoherent_subspacenet_esprit_gap2_snr5.json",
+      "result_name": "phase7f_gb19_noncoh_g2_s5_mixedft",
+      "method_name": "esprit",
+      "coherence_key": "noncoherent",
+      "coherence_label": "non-coherent",
+      "gap_deg": 2,
+      "snr_db": 5,
+      "split": "noncoherent_transfer",
+      "bucket_labels": [
+        "noncoherent_transfer",
+        "full_noncoherent_transfer",
+        "joint_gap_snr_shift"
+      ],
+      "retention_priority": false,
+      "reference_schemes": {
+        "phase7e": "phase7e_gb19_noncoh_g2_s5_antirect_transfer"
+      }
+    },
+    {
+      "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase6_groupb_1p9_noncoherent_fixed_gap_snr_grid\\phase6_groupb_1p9_noncoherent_subspacenet_esprit_gap2_snr10.json",
+      "result_name": "phase7f_gb19_noncoh_g2_s10_mixedft",
+      "method_name": "esprit",
+      "coherence_key": "noncoherent",
+      "coherence_label": "non-coherent",
+      "gap_deg": 2,
+      "snr_db": 10,
+      "split": "noncoherent_transfer",
+      "bucket_labels": [
+        "noncoherent_transfer",
+        "full_noncoherent_transfer",
+        "joint_gap_snr_shift"
+      ],
+      "retention_priority": false,
+      "reference_schemes": {
+        "phase7e": "phase7e_gb19_noncoh_g2_s10_antirect_transfer"
+      }
+    },
+    {
+      "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase6_groupb_1p9_noncoherent_fixed_gap_snr_grid\\phase6_groupb_1p9_noncoherent_subspacenet_esprit_gap2_snr15.json",
+      "result_name": "phase7f_gb19_noncoh_g2_s15_mixedft",
+      "method_name": "esprit",
+      "coherence_key": "noncoherent",
+      "coherence_label": "non-coherent",
+      "gap_deg": 2,
+      "snr_db": 15,
+      "split": "noncoherent_transfer",
+      "bucket_labels": [
+        "noncoherent_transfer",
+        "full_noncoherent_transfer",
+        "joint_gap_snr_shift"
+      ],
+      "retention_priority": false,
+      "reference_schemes": {
+        "phase7e": "phase7e_gb19_noncoh_g2_s15_antirect_transfer"
+      }
+    },
+    {
+      "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase6_groupb_1p9_noncoherent_fixed_gap_snr_grid\\phase6_groupb_1p9_noncoherent_subspacenet_esprit_gap3_snr1.json",
+      "result_name": "phase7f_gb19_noncoh_g3_s1_mixedft",
+      "method_name": "esprit",
+      "coherence_key": "noncoherent",
+      "coherence_label": "non-coherent",
+      "gap_deg": 3,
+      "snr_db": 1,
+      "split": "noncoherent_transfer",
+      "bucket_labels": [
+        "noncoherent_transfer",
+        "gap_shift_only",
+        "full_noncoherent_transfer"
+      ],
+      "retention_priority": false,
+      "reference_schemes": {
+        "phase7e": "phase7e_gb19_noncoh_g3_s1_antirect_transfer"
+      }
+    },
+    {
+      "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase6_groupb_1p9_noncoherent_fixed_gap_snr_grid\\phase6_groupb_1p9_noncoherent_subspacenet_esprit_gap3_snr5.json",
+      "result_name": "phase7f_gb19_noncoh_g3_s5_mixedft",
+      "method_name": "esprit",
+      "coherence_key": "noncoherent",
+      "coherence_label": "non-coherent",
+      "gap_deg": 3,
+      "snr_db": 5,
+      "split": "noncoherent_transfer",
+      "bucket_labels": [
+        "noncoherent_transfer",
+        "full_noncoherent_transfer",
+        "joint_gap_snr_shift"
+      ],
+      "retention_priority": false,
+      "reference_schemes": {
+        "phase7e": "phase7e_gb19_noncoh_g3_s5_antirect_transfer"
+      }
+    },
+    {
+      "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase6_groupb_1p9_noncoherent_fixed_gap_snr_grid\\phase6_groupb_1p9_noncoherent_subspacenet_esprit_gap3_snr10.json",
+      "result_name": "phase7f_gb19_noncoh_g3_s10_mixedft",
+      "method_name": "esprit",
+      "coherence_key": "noncoherent",
+      "coherence_label": "non-coherent",
+      "gap_deg": 3,
+      "snr_db": 10,
+      "split": "noncoherent_transfer",
+      "bucket_labels": [
+        "noncoherent_transfer",
+        "full_noncoherent_transfer",
+        "joint_gap_snr_shift"
+      ],
+      "retention_priority": false,
+      "reference_schemes": {
+        "phase7e": "phase7e_gb19_noncoh_g3_s10_antirect_transfer"
+      }
+    },
+    {
+      "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase6_groupb_1p9_noncoherent_fixed_gap_snr_grid\\phase6_groupb_1p9_noncoherent_subspacenet_esprit_gap3_snr15.json",
+      "result_name": "phase7f_gb19_noncoh_g3_s15_mixedft",
+      "method_name": "esprit",
+      "coherence_key": "noncoherent",
+      "coherence_label": "non-coherent",
+      "gap_deg": 3,
+      "snr_db": 15,
+      "split": "noncoherent_transfer",
+      "bucket_labels": [
+        "noncoherent_transfer",
+        "full_noncoherent_transfer",
+        "joint_gap_snr_shift"
+      ],
+      "retention_priority": false,
+      "reference_schemes": {
+        "phase7e": "phase7e_gb19_noncoh_g3_s15_antirect_transfer"
+      }
+    },
+    {
+      "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase6_groupb_1p9_noncoherent_fixed_gap_snr_grid\\phase6_groupb_1p9_noncoherent_subspacenet_esprit_gap4_snr1.json",
+      "result_name": "phase7f_gb19_noncoh_g4_s1_mixedft",
+      "method_name": "esprit",
+      "coherence_key": "noncoherent",
+      "coherence_label": "non-coherent",
+      "gap_deg": 4,
+      "snr_db": 1,
+      "split": "noncoherent_transfer",
+      "bucket_labels": [
+        "noncoherent_transfer",
+        "gap_shift_only",
+        "full_noncoherent_transfer"
+      ],
+      "retention_priority": false,
+      "reference_schemes": {
+        "phase7e": "phase7e_gb19_noncoh_g4_s1_antirect_transfer"
+      }
+    },
+    {
+      "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase6_groupb_1p9_noncoherent_fixed_gap_snr_grid\\phase6_groupb_1p9_noncoherent_subspacenet_esprit_gap4_snr5.json",
+      "result_name": "phase7f_gb19_noncoh_g4_s5_mixedft",
+      "method_name": "esprit",
+      "coherence_key": "noncoherent",
+      "coherence_label": "non-coherent",
+      "gap_deg": 4,
+      "snr_db": 5,
+      "split": "noncoherent_transfer",
+      "bucket_labels": [
+        "noncoherent_transfer",
+        "full_noncoherent_transfer",
+        "joint_gap_snr_shift"
+      ],
+      "retention_priority": false,
+      "reference_schemes": {
+        "phase7e": "phase7e_gb19_noncoh_g4_s5_antirect_transfer"
+      }
+    },
+    {
+      "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase6_groupb_1p9_noncoherent_fixed_gap_snr_grid\\phase6_groupb_1p9_noncoherent_subspacenet_esprit_gap4_snr10.json",
+      "result_name": "phase7f_gb19_noncoh_g4_s10_mixedft",
+      "method_name": "esprit",
+      "coherence_key": "noncoherent",
+      "coherence_label": "non-coherent",
+      "gap_deg": 4,
+      "snr_db": 10,
+      "split": "noncoherent_transfer",
+      "bucket_labels": [
+        "noncoherent_transfer",
+        "full_noncoherent_transfer",
+        "joint_gap_snr_shift"
+      ],
+      "retention_priority": false,
+      "reference_schemes": {
+        "phase7e": "phase7e_gb19_noncoh_g4_s10_antirect_transfer"
+      }
+    },
+    {
+      "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase6_groupb_1p9_noncoherent_fixed_gap_snr_grid\\phase6_groupb_1p9_noncoherent_subspacenet_esprit_gap4_snr15.json",
+      "result_name": "phase7f_gb19_noncoh_g4_s15_mixedft",
+      "method_name": "esprit",
+      "coherence_key": "noncoherent",
+      "coherence_label": "non-coherent",
+      "gap_deg": 4,
+      "snr_db": 15,
+      "split": "noncoherent_transfer",
+      "bucket_labels": [
+        "noncoherent_transfer",
+        "full_noncoherent_transfer",
+        "joint_gap_snr_shift"
+      ],
+      "retention_priority": false,
+      "reference_schemes": {
+        "phase7e": "phase7e_gb19_noncoh_g4_s15_antirect_transfer"
+      }
+    },
+    {
+      "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase6_groupb_1p9_noncoherent_fixed_gap_snr_grid\\phase6_groupb_1p9_noncoherent_subspacenet_esprit_gap5_snr1.json",
+      "result_name": "phase7f_gb19_noncoh_g5_s1_mixedft",
+      "method_name": "esprit",
+      "coherence_key": "noncoherent",
+      "coherence_label": "non-coherent",
+      "gap_deg": 5,
+      "snr_db": 1,
+      "split": "noncoherent_transfer",
+      "bucket_labels": [
+        "noncoherent_transfer",
+        "gap_shift_only",
+        "full_noncoherent_transfer"
+      ],
+      "retention_priority": false,
+      "reference_schemes": {
+        "phase7e": "phase7e_gb19_noncoh_g5_s1_antirect_transfer"
+      }
+    },
+    {
+      "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase6_groupb_1p9_noncoherent_fixed_gap_snr_grid\\phase6_groupb_1p9_noncoherent_subspacenet_esprit_gap5_snr5.json",
+      "result_name": "phase7f_gb19_noncoh_g5_s5_mixedft",
+      "method_name": "esprit",
+      "coherence_key": "noncoherent",
+      "coherence_label": "non-coherent",
+      "gap_deg": 5,
+      "snr_db": 5,
+      "split": "noncoherent_transfer",
+      "bucket_labels": [
+        "noncoherent_transfer",
+        "full_noncoherent_transfer",
+        "joint_gap_snr_shift"
+      ],
+      "retention_priority": false,
+      "reference_schemes": {
+        "phase7e": "phase7e_gb19_noncoh_g5_s5_antirect_transfer"
+      }
+    },
+    {
+      "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase6_groupb_1p9_noncoherent_fixed_gap_snr_grid\\phase6_groupb_1p9_noncoherent_subspacenet_esprit_gap5_snr10.json",
+      "result_name": "phase7f_gb19_noncoh_g5_s10_mixedft",
+      "method_name": "esprit",
+      "coherence_key": "noncoherent",
+      "coherence_label": "non-coherent",
+      "gap_deg": 5,
+      "snr_db": 10,
+      "split": "noncoherent_transfer",
+      "bucket_labels": [
+        "noncoherent_transfer",
+        "full_noncoherent_transfer",
+        "joint_gap_snr_shift"
+      ],
+      "retention_priority": false,
+      "reference_schemes": {
+        "phase7e": "phase7e_gb19_noncoh_g5_s10_antirect_transfer"
+      }
+    },
+    {
+      "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase6_groupb_1p9_noncoherent_fixed_gap_snr_grid\\phase6_groupb_1p9_noncoherent_subspacenet_esprit_gap5_snr15.json",
+      "result_name": "phase7f_gb19_noncoh_g5_s15_mixedft",
+      "method_name": "esprit",
+      "coherence_key": "noncoherent",
+      "coherence_label": "non-coherent",
+      "gap_deg": 5,
+      "snr_db": 15,
+      "split": "noncoherent_transfer",
+      "bucket_labels": [
+        "noncoherent_transfer",
+        "full_noncoherent_transfer",
+        "joint_gap_snr_shift"
+      ],
+      "retention_priority": false,
+      "reference_schemes": {
+        "phase7e": "phase7e_gb19_noncoh_g5_s15_antirect_transfer"
+      }
+    }
+  ],
+  "reference_sources": {
+    "coherent_summary_csv": "D:\\workspace1\\SubspaceNet\\results\\phase6_groupb_1p9_coherent_fixed_gap_snr_grid\\summary.csv",
+    "noncoherent_summary_csv": "D:\\workspace1\\SubspaceNet\\results\\phase6_groupb_1p9_noncoherent_fixed_gap_snr_grid\\summary.csv",
+    "phase7e_summary_csv": "D:\\workspace1\\SubspaceNet\\results\\phase7e_groupb_1p9_antirect_fusion_generalization\\summary.csv"
+  },
+  "report": {
+    "flat_results_root": true,
+    "write_summary_csv": true,
+    "markdown_output": "phase7f_groupb_1p9_mixed_condition_finetune_results.md",
+    "markdown_title": "Phase 7F - Group B 1.9 Lambda Mixed-Condition Fine-Tuning",
+    "markdown_description": "Phase 7F fine-tunes the Phase 7D anti-rectifier fusion checkpoint on a 360k mixed-condition dataset and evaluates it on the reused Phase 7E coherent and non-coherent fixed-gap / SNR grids.",
+    "markdown_conditions": [
+      "Array: Group B 12-channel 2D hardware geometry",
+      "Physical spacing: 1.9 lambda",
+      "Model family: SS(2/3 x 3) -> LRMC -> width-controlled anti-rectifier spatial fusion -> SubspaceNet backbone 3x3 -> ESPRIT",
+      "Initialization: fine-tune from the best Phase 7D checkpoint",
+      "Mixed dataset size: 360,000 total samples",
+      "Coherence weighting: 60% coherent, 40% non-coherent",
+      "Evaluation set: same reused 40-cell grid as Phase 7E",
+      "Primary metric: horizontal-angle RMSE in degrees",
+      "Comparison focus: source-cell retention and delta vs Phase 7E"
+    ]
+  },
+  "template_name": "phase7f_groupb_1p9_mixed_condition_finetune_eval"
+}
