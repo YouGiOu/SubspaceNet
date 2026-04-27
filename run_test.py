@@ -423,6 +423,8 @@ def write_summary_csv(rows: List[Dict], output_path: Path):
         "delta_vs_phase6_direct_learned_rmse_deg",
         "phase7e_reference_rmse_deg",
         "delta_vs_phase7e_reference_rmse_deg",
+        "phase7f_reference_rmse_deg",
+        "delta_vs_phase7f_reference_rmse_deg",
     ]
     with output_path.open("w", encoding="utf-8", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=fieldnames)
@@ -478,10 +480,42 @@ def write_transfer_markdown(
         lines.append("")
     lines.append(f"Reference anchor RMSE: `{source_train_rmse:.4f} deg`")
     lines.append("")
+    boundary_rows = [
+        row
+        for row in coherent_rows
+        if int(row.get("gap_deg", 0)) == 2
+    ]
+    boundary_rows = [
+        row for row in boundary_rows if row.get("phase7f_reference_rmse_deg") is not None
+    ]
+    boundary_baseline_label = report.get("boundary_baseline_label", "Phase 7F")
+    boundary_current_label = report.get("boundary_current_label", "Current")
+    if boundary_rows:
+        lines.append("## Coherent 2-Degree Boundary")
+        lines.append("")
+        lines.append(
+            f"| SNR (dB) | {boundary_baseline_label} RMSE (deg) | {boundary_current_label} RMSE (deg) | Delta vs {boundary_baseline_label} |"
+        )
+        lines.append("| ---: | ---: | ---: | ---: |")
+        for row in boundary_rows:
+            phase7f_text = (
+                f"{row['phase7f_reference_rmse_deg']:.4f}"
+                if row.get("phase7f_reference_rmse_deg") is not None
+                else "missing"
+            )
+            delta_phase7f_text = (
+                f"{row['delta_vs_phase7f_reference_rmse_deg']:+.4f}"
+                if row.get("delta_vs_phase7f_reference_rmse_deg") is not None
+                else "missing"
+            )
+            lines.append(
+                f"| {row.get('snr_db', '')} | {phase7f_text} | {row['rmse_deg']:.4f} | {delta_phase7f_text} |"
+            )
+        lines.append("")
     lines.append("## Coherent Reused Grid")
     lines.append("")
-    lines.append("| Gap (deg) | SNR (dB) | RMSE (deg) | Avg runtime / sample (s) | Delta vs anchor | Delta vs classical best | Delta vs direct learned | Delta vs Phase 7E | Cache status |")
-    lines.append("| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |")
+    lines.append("| Gap (deg) | SNR (dB) | RMSE (deg) | Avg runtime / sample (s) | Delta vs anchor | Delta vs classical best | Delta vs direct learned | Delta vs Phase 7E | Delta vs Phase 7F | Cache status |")
+    lines.append("| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |")
     for row in coherent_rows:
         lines.append(
             f"| {row.get('gap_deg', '')} | {row.get('snr_db', '')} | {row['rmse_deg']:.4f} | "
@@ -489,11 +523,12 @@ def write_transfer_markdown(
             f"{format_float(row['delta_vs_phase6_classical_best_rmse_deg']) if row['delta_vs_phase6_classical_best_rmse_deg'] is not None else 'missing'} | "
             f"{format_float(row['delta_vs_phase6_direct_learned_rmse_deg']) if row['delta_vs_phase6_direct_learned_rmse_deg'] is not None else 'missing'} | "
             f"{format_float(row['delta_vs_phase7e_reference_rmse_deg']) if row.get('delta_vs_phase7e_reference_rmse_deg') is not None else 'missing'} | "
+            f"{format_float(row['delta_vs_phase7f_reference_rmse_deg']) if row.get('delta_vs_phase7f_reference_rmse_deg') is not None else 'missing'} | "
             f"{row.get('dataset_cache_status', 'unknown')} |"
         )
     lines.extend(["", "## Non-Coherent Reused Grid", ""])
-    lines.append("| Gap (deg) | SNR (dB) | RMSE (deg) | Avg runtime / sample (s) | Delta vs anchor | Delta vs classical best | Delta vs direct learned | Delta vs Phase 7E | Cache status |")
-    lines.append("| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |")
+    lines.append("| Gap (deg) | SNR (dB) | RMSE (deg) | Avg runtime / sample (s) | Delta vs anchor | Delta vs classical best | Delta vs direct learned | Delta vs Phase 7E | Delta vs Phase 7F | Cache status |")
+    lines.append("| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |")
     for row in noncoherent_rows:
         lines.append(
             f"| {row.get('gap_deg', '')} | {row.get('snr_db', '')} | {row['rmse_deg']:.4f} | "
@@ -501,6 +536,7 @@ def write_transfer_markdown(
             f"{format_float(row['delta_vs_phase6_classical_best_rmse_deg']) if row['delta_vs_phase6_classical_best_rmse_deg'] is not None else 'missing'} | "
             f"{format_float(row['delta_vs_phase6_direct_learned_rmse_deg']) if row['delta_vs_phase6_direct_learned_rmse_deg'] is not None else 'missing'} | "
             f"{format_float(row['delta_vs_phase7e_reference_rmse_deg']) if row.get('delta_vs_phase7e_reference_rmse_deg') is not None else 'missing'} | "
+            f"{format_float(row['delta_vs_phase7f_reference_rmse_deg']) if row.get('delta_vs_phase7f_reference_rmse_deg') is not None else 'missing'} | "
             f"{row.get('dataset_cache_status', 'unknown')} |"
         )
     retention_rows = [
@@ -511,13 +547,14 @@ def write_transfer_markdown(
     ]
     if retention_rows:
         lines.extend(["", "## Retention Table", ""])
-        lines.append("| Cell | RMSE (deg) | Delta vs anchor | Delta vs Phase 7E |")
-        lines.append("| --- | ---: | ---: | ---: |")
+        lines.append("| Cell | RMSE (deg) | Delta vs anchor | Delta vs Phase 7E | Delta vs Phase 7F |")
+        lines.append("| --- | ---: | ---: | ---: | ---: |")
         for row in retention_rows:
             cell_label = f"{row.get('coherence', 'unknown')} | gap {row.get('gap_deg', '?')} | snr {row.get('snr_db', '?')}"
             lines.append(
                 f"| {cell_label} | {row['rmse_deg']:.4f} | {row['delta_vs_source_train_cell_rmse_deg']:+.4f} | "
-                f"{format_float(row['delta_vs_phase7e_reference_rmse_deg']) if row.get('delta_vs_phase7e_reference_rmse_deg') is not None else 'missing'} |"
+                f"{format_float(row['delta_vs_phase7e_reference_rmse_deg']) if row.get('delta_vs_phase7e_reference_rmse_deg') is not None else 'missing'} | "
+                f"{format_float(row['delta_vs_phase7f_reference_rmse_deg']) if row.get('delta_vs_phase7f_reference_rmse_deg') is not None else 'missing'} |"
             )
     lines.extend(["", "## Bucket Summary", ""])
     lines.append("| Bucket | Cells | Mean RMSE (deg) | Median RMSE (deg) | Best RMSE (deg) | Worst RMSE (deg) | Mean runtime / sample (s) |")
@@ -529,8 +566,8 @@ def write_transfer_markdown(
             f"{row['worst_rmse_deg']:.4f} | {row['mean_runtime_sec']:.6f} |"
         )
     lines.extend(["", "## Comparison Table", ""])
-    lines.append("| Cell | Phase 6 classical best | RMSE (deg) | Avg runtime / sample (s) | Delta vs classical best | Direct Phase 6 learned RMSE (deg) | Delta vs direct learned | Phase 7E RMSE (deg) | Delta vs Phase 7E |")
-    lines.append("| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |")
+    lines.append("| Cell | Phase 6 classical best | RMSE (deg) | Avg runtime / sample (s) | Delta vs classical best | Direct Phase 6 learned RMSE (deg) | Delta vs direct learned | Phase 7E RMSE (deg) | Delta vs Phase 7E | Phase 7F RMSE (deg) | Delta vs Phase 7F |")
+    lines.append("| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |")
     for row in sorted(rows, key=lambda item: (item.get("coherence", ""), item.get("gap_deg", 0), item.get("snr_db", 0))):
         cell_label = f"{row.get('coherence', 'unknown')} | gap {row.get('gap_deg', '?')} | snr {row.get('snr_db', '?')}"
         classical_label = (
@@ -563,10 +600,20 @@ def write_transfer_markdown(
             if row.get("delta_vs_phase7e_reference_rmse_deg") is not None
             else "missing"
         )
+        phase7f_text = (
+            f"{row['phase7f_reference_rmse_deg']:.4f}"
+            if row.get("phase7f_reference_rmse_deg") is not None
+            else "missing"
+        )
+        delta_phase7f_text = (
+            f"{row['delta_vs_phase7f_reference_rmse_deg']:+.4f}"
+            if row.get("delta_vs_phase7f_reference_rmse_deg") is not None
+            else "missing"
+        )
         lines.append(
             f"| {cell_label} | {classical_label} | {row['rmse_deg']:.4f} | "
             f"{row['avg_runtime_sec']:.6f} | {delta_classical_text} | "
-            f"{direct_learned_text} | {delta_direct_text} | {phase7e_text} | {delta_phase7e_text} |"
+            f"{direct_learned_text} | {delta_direct_text} | {phase7e_text} | {delta_phase7e_text} | {phase7f_text} | {delta_phase7f_text} |"
         )
     output_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
@@ -643,6 +690,14 @@ def run_subspacenet_transfer_test(repo_root: Path, template: Dict, results_root:
                 scheme_name=reference_schemes["phase7e"],
                 method_name=method_name,
             )
+        phase7f_reference_rmse = None
+        if reference_schemes.get("phase7f"):
+            phase7f_reference_rmse = get_named_reference_rmse(
+                reference_maps,
+                summary_key="phase7f",
+                scheme_name=reference_schemes["phase7f"],
+                method_name=method_name,
+            )
         row = {
             "scheme": cell_config["result_name"],
             "method": method_name,
@@ -672,6 +727,10 @@ def run_subspacenet_transfer_test(repo_root: Path, template: Dict, results_root:
             "phase7e_reference_rmse_deg": phase7e_reference_rmse,
             "delta_vs_phase7e_reference_rmse_deg": (
                 None if phase7e_reference_rmse is None else metrics["rmse_deg"] - phase7e_reference_rmse
+            ),
+            "phase7f_reference_rmse_deg": phase7f_reference_rmse,
+            "delta_vs_phase7f_reference_rmse_deg": (
+                None if phase7f_reference_rmse is None else metrics["rmse_deg"] - phase7f_reference_rmse
             ),
             "retention_priority": bool(cell_config.get("retention_priority", False)),
         }

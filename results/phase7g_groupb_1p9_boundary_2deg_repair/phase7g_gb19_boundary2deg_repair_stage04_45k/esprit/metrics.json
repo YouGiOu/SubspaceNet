@@ -1,0 +1,30 @@
+{
+  "template_name": "phase7g_gb19_boundary2deg_repair_stage04_45k",
+  "method_name": "esprit",
+  "rmse_deg": 0.554613030109599,
+  "seed": 45,
+  "loss_measure": "rmse_deg",
+  "train_loss": [
+    0.01344717313182811,
+    0.013372000373493835,
+    0.013339170652162582,
+    0.013382563187429848
+  ],
+  "valid_loss": [
+    0.010778858972516348,
+    0.010712894054466396,
+    0.010674465903548978,
+    0.010647694927681682
+  ],
+  "checkpoint_dir": "D:\\workspace1\\SubspaceNet\\results\\phase7g_groupb_1p9_boundary_2deg_repair\\phase7g_gb19_boundary2deg_repair_stage04_45k\\esprit\\checkpoints",
+  "pretrained_checkpoint_path": "D:\\workspace1\\SubspaceNet\\results\\phase7g_groupb_1p9_boundary_2deg_repair\\phase7g_gb19_boundary2deg_repair_stage03_45k\\esprit\\checkpoints\\SubspaceNetSSFusionAntiRectEspritPhase7d_M=2_T=40_SNR_1_tau=8_NarrowBand_diff_method=esprit_coherent_eta=0_bias=0_tpl=phase7g_gb19_boundary2deg_repair_stage03_45k_00d74b43e659_sv_noise=0",
+  "avg_fused_covariance_norm": 632.4282088952398,
+  "avg_fused_diagonal_mean_real": -20.173171449010567,
+  "avg_input_branch_norms": [
+    3610.4834947492727,
+    3485.686025561387,
+    3470.8733986457046
+  ],
+  "fusion_kernel_type": "3x3_spatial_antirect_width_controlled",
+  "subspacenet_backbone_kernel_size": 3
+}

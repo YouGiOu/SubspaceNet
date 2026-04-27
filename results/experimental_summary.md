@@ -454,6 +454,16 @@ Current interpretation after the Phase 7F mixed-condition fine-tuning run:
 - runtime remains stable at about `0.0162 - 0.0165 s` per sample across the evaluation grid, so the mixed-condition fine-tuning gain comes without an operational runtime penalty
 - current working interpretation: mixed-condition fine-tuning is the correct next direction for practical deployment, but source hard-cell retention still needs active protection if the goal is to keep the original `1 deg`, `1 dB` coherent optimum nearly unchanged
 
+Current interpretation after the Phase 7G boundary-repair run:
+- targeted repair sampling focused on the coherent `2 deg` boundary improves that regime consistently across all four tested SNR values relative to Phase `7F`: about `1.3768 -> 1.2918 deg` at `1 dB`, `1.2617 -> 1.1271 deg` at `5 dB`, `1.2397 -> 1.0751 deg` at `10 dB`, and `1.2022 -> 1.0423 deg` at `15 dB`
+- this is therefore good evidence that the remaining `2 deg` weakness after Phase `7F` was at least partly a dataset-allocation problem rather than requiring a new architecture change
+- unlike the first broadening jump into Phase `7F`, the Phase `7G` repair step also improves hard-anchor retention: coherent `1 deg`, `1 dB` improves from about `0.4481 deg` in Phase `7F` to about `0.3911 deg`, moving meaningfully back toward the original Phase `7D` optimum
+- non-coherent transfer remains broadly strong, but it does not improve uniformly; many non-coherent cells change only slightly, and some easier wide-gap non-coherent cells become a little worse than in Phase `7F`
+- the same mild tradeoff appears on some easier coherent wide-gap cells, especially around coherent `5 deg`, where the model gives back a small amount of Phase `7F` performance while repairing the `2 deg` boundary
+- coherent OOD mean RMSE improves modestly from about `0.6185 deg` in Phase `7F` to about `0.5916 deg` in Phase `7G`, while non-coherent transfer mean RMSE shifts slightly worse from about `0.3727 deg` to about `0.3794 deg`
+- current working interpretation: boundary-aware repair is the right next lever once broad mixed-condition training is in place, but it should be viewed as a targeted redistribution of performance rather than a uniform global improvement
+- runtime is still operationally stable, but some coherent cells now run a bit slower than in Phase `7F`, with several coherent reused-grid entries around `0.020 - 0.021 s` per sample; so Phase `7G` keeps the same inference pipeline but no longer matches the tighter Phase `7F` runtime band as cleanly
+
 ### Current paper-scale training configuration
 
 The large-sample runs use:
@@ -647,9 +657,12 @@ Current repo style prefers:
 26. Phase 7E also shows that runtime is not the issue: the full preprocessing-plus-inference path stays very stable at about `0.0163 s` to `0.0169 s` per sample across the reused grid. The limiting factor is therefore transfer quality, not computational volatility.
 27. Phase 7F then showed that this limitation is not fundamental to the architecture alone. Fine-tuning the Phase `7D` anti-rectifier fusion checkpoint on a `360k` mixed-condition dataset with `60%` coherent and `40%` non-coherent samples reduced coherent OOD mean RMSE from about `2.13 deg` to about `0.62 deg` and non-coherent transfer mean RMSE from about `1.68 deg` to about `0.37 deg` relative to the Phase `7E` zero-shot transfer baseline.
 28. This is the strongest current evidence that dataset design and training distribution are the key levers for turning the best hard-cell specialist into a broader Group B model. The tradeoff is partial retention loss: the source coherent `1 deg`, `1 dB` anchor worsened from about `0.3563 deg` to about `0.4481 deg`, so broad robustness improved strongly but did not come for free.
-29. The current best interpretation is therefore more nuanced: the Phase `7D` model is the best pure hard-cell specialist, while the Phase `7F` fine-tuned model is the best current broad-coverage candidate. If practical deployment across varied conditions is the goal, mixed-condition fine-tuning is now the most justified direction, with the next challenge being stronger protection of the original hard coherent corner during broadening.
-30. Root-MUSIC remains the most fragile component in both classical and learned forms and should still be treated as experimental unless it is the explicit object of study.
-31. The experiment framework is now mature enough that future work should be targeted:
+29. Phase 7G then refined that mixed-condition result by targeting the coherent `2 deg` boundary directly. Relative to Phase `7F`, all four coherent `2 deg` cells improved, with RMSE reductions of about `0.085 - 0.165 deg` across `1, 5, 10, 15 dB`. This is strong evidence that the remaining `2 deg` weakness was at least partly a training-distribution problem.
+30. Phase 7G also partially repaired the source-cell retention problem introduced by Phase `7F`: the coherent `1 deg`, `1 dB` anchor improved from about `0.4481 deg` to about `0.3911 deg`, moving back toward the original Phase `7D` hard-cell optimum while preserving most of the broad generalization gains.
+31. The tradeoff is that Phase `7G` is not a uniform improvement over Phase `7F`. It redistributes performance: the coherent `2 deg` boundary becomes stronger, anchor retention gets better, but some easier wide-gap coherent and non-coherent cells become slightly worse, and runtime becomes somewhat less uniform on the coherent side.
+32. The current best interpretation is therefore now three-way rather than two-way: Phase `7D` remains the best pure hard-cell specialist, Phase `7F` is the strongest broad mixed-condition generalization step, and Phase `7G` is the strongest targeted boundary-repair variant when the coherent `2 deg` regime is especially important.
+33. Root-MUSIC remains the most fragile component in both classical and learned forms and should still be treated as experimental unless it is the explicit object of study.
+34. The experiment framework is now mature enough that future work should be targeted:
    - coherent low-separation Group B, especially `1 - 2 deg`
    - combined hard regimes such as low-separation plus low-snapshot
    - focused SubspaceNet-ESPRIT improvements in the hard coherent cells
@@ -658,3 +671,4 @@ Current repo style prefers:
    - learned SS-fusion follow-up that checks whether the new anti-rectifier spatial-fusion gain persists across the next coherent hard cells
    - structure-aware SS-fusion follow-up that clarifies whether the best next model should use anti-rectifier spatial fusion, channel-only fusion, or more explicitly constrained weighted fusion
    - mixed-cell or mixed-regime training follow-up that improves retention of the coherent `1 deg`, `1 dB` anchor while preserving the broad transfer gains already demonstrated in Phase `7F`
+   - boundary-aware follow-up that keeps the coherent `2 deg` repair from Phase `7G` while recovering the small wide-gap losses introduced by the repair weighting

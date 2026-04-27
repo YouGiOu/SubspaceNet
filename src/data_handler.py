@@ -581,21 +581,29 @@ def _generate_weighted_random_component(
             "_generate_weighted_random_component: coherence_weights, snr_weights, "
             "and gap_group_weights are required"
         )
-    gap_group_probabilities = np.asarray(
-        [float(group["weight"]) for group in gap_group_weights], dtype=float
-    )
-    gap_group_probabilities = gap_group_probabilities / np.sum(gap_group_probabilities)
 
     for _ in tqdm(range(count), desc=f"mixed-random::{split_name}"):
         params = copy.deepcopy(base_system_model_params)
         coherence_key = _weighted_choice(coherence_weights)
+        coherence_gap_groups = weighted_random_config.get(
+            f"{coherence_key}_gap_group_weights", gap_group_weights
+        )
+        coherence_snr_weights = weighted_random_config.get(
+            f"{coherence_key}_snr_weights", snr_weights
+        )
+        gap_group_probabilities = np.asarray(
+            [float(group["weight"]) for group in coherence_gap_groups], dtype=float
+        )
+        gap_group_probabilities = gap_group_probabilities / np.sum(gap_group_probabilities)
         params.set_parameter(
             "signal_nature",
             "coherent" if coherence_key == "coherent" else "non-coherent",
         )
-        params.set_parameter("snr", float(_weighted_choice(snr_weights)))
-        group_index = int(np.random.choice(len(gap_group_weights), p=gap_group_probabilities))
-        gap_group = gap_group_weights[group_index]
+        params.set_parameter("snr", float(_weighted_choice(coherence_snr_weights)))
+        group_index = int(
+            np.random.choice(len(coherence_gap_groups), p=gap_group_probabilities)
+        )
+        gap_group = coherence_gap_groups[group_index]
         gaps = [float(value) for value in gap_group.get("gaps", [])]
         if not gaps:
             raise ValueError("_generate_weighted_random_component: gap group missing gaps")
