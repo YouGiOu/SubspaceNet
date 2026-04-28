@@ -130,6 +130,36 @@ def _sample_2d_doa_pairs(system_model_params: SystemModelParams):
     return doa_pairs
 
 
+def _resolve_canonical_row_indices(system_model_params: SystemModelParams):
+    row_groups = getattr(system_model_params, "row_groups", None)
+    if row_groups is None:
+        geometry_name = getattr(system_model_params, "geometry_name", None)
+        physical_sensor_positions_2d = getattr(
+            system_model_params, "physical_sensor_positions_2d", None
+        )
+        if physical_sensor_positions_2d is not None or (
+            isinstance(geometry_name, str)
+            and geometry_name.startswith("mimo_2d_12ch")
+        ):
+            row_groups = ((0, 1, 2, 3), (4, 5, 6, 7), (8, 9, 10, 11))
+    if not row_groups:
+        return None
+    canonical_group = getattr(system_model_params, "canonical_row_group", None)
+    if canonical_group is None:
+        canonical_group = len(row_groups) - 1
+    canonical_group = int(max(0, min(int(canonical_group), len(row_groups) - 1)))
+    return [int(index) for index in row_groups[canonical_group]]
+
+
+def _extract_canonical_row_snapshot(
+    X: torch.Tensor, system_model_params: SystemModelParams
+):
+    row_indices = _resolve_canonical_row_indices(system_model_params)
+    if not row_indices:
+        return X
+    return X[row_indices, :]
+
+
 def build_subspacenet_input(
     X: torch.Tensor,
     system_model_params: SystemModelParams,
@@ -137,6 +167,10 @@ def build_subspacenet_input(
     model_type: str = "SubspaceNet",
 ):
     """Builds the SubspaceNet input tensor for either ULA or NULA+LRMC paths."""
+    if model_type.startswith("SubspaceNetSingleRow"):
+        row_snapshot = _extract_canonical_row_snapshot(X, system_model_params)
+        return create_autocorrelation_tensor(row_snapshot, tau).to(torch.float)
+
     if model_type.startswith("SubspaceNetSSFusion"):
         return build_ss_fusion_phase1p1_input(X=X, system_model_params=system_model_params)
 

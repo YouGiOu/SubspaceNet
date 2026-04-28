@@ -1,0 +1,7 @@
+{
+  "checkpoint_path": "D:\\workspace1\\SubspaceNet\\results\\phase7j_groupb_1p9_randomgap_architecture_comparison\\phase7j_gb19_modelc_randomgap_45k\\esprit\\checkpoints\\SubspaceNetSingleRow_M=2_T=40_SNR_1_tau=8_NarrowBand_diff_method=esprit_coherent_eta=0_bias=0_tpl=phase7j_gb19_modelc_randomgap_45k_fa6337a938c2_sv_noise=0",
+  "source_train_rmse_deg": 2.8607934825562795,
+  "reference_anchor_rmse_deg": 2.8607934825562795,
+  "source_template_name": "phase7j_gb19_modelc_randomgap_45k",
+  "source_model_type": "SubspaceNetSingleRow"
+}

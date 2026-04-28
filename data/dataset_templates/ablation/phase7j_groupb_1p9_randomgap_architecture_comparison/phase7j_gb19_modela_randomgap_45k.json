@@ -1,0 +1,598 @@
+{
+  "description": "Phase 7J fair from-scratch architecture comparison on a shared 45,000-sample random-gap dataset for SS(3/3) -> LRMC -> SubspaceNet(2x2).",
+  "experiment_type": "subspacenet",
+  "methods": [
+    "esprit"
+  ],
+  "seed": 42,
+  "scenario_data_path": "p7j_modela_45k",
+  "commands": {
+    "CREATE_DATA": true,
+    "CACHE_DATASET": true,
+    "LOAD_DATA": false,
+    "TRAIN_MODEL": true,
+    "EVALUATE_MODE": true
+  },
+  "system_model": {
+    "N": 12,
+    "M": 2,
+    "T": 40,
+    "snr": 1,
+    "signal_type": "NarrowBand",
+    "signal_nature": "coherent",
+    "eta": 0,
+    "bias": 0,
+    "sv_noise_var": 0,
+    "array_spacing": 1.9,
+    "geometry_name": "mimo_2d_12ch_groupb_1p9",
+    "doa_min": -15,
+    "doa_max": 15,
+    "elevation_min": -15,
+    "elevation_max": 15,
+    "doa_resolution": 0.01,
+    "min_doa_gap": 1,
+    "sensor_positions": [
+      0,
+      4,
+      7,
+      8
+    ],
+    "physical_sensor_positions_2d": [
+      [
+        -15.2,
+        -3.8
+      ],
+      [
+        -7.6,
+        -3.8
+      ],
+      [
+        -1.9,
+        -3.8
+      ],
+      [
+        0,
+        -3.8
+      ],
+      [
+        -7.6,
+        -1.9
+      ],
+      [
+        0,
+        -1.9
+      ],
+      [
+        5.7,
+        -1.9
+      ],
+      [
+        7.6,
+        -1.9
+      ],
+      [
+        0,
+        0
+      ],
+      [
+        7.6,
+        0
+      ],
+      [
+        13.3,
+        0
+      ],
+      [
+        15.2,
+        0
+      ]
+    ],
+    "row_groups": [
+      [
+        0,
+        1,
+        2,
+        3
+      ],
+      [
+        4,
+        5,
+        6,
+        7
+      ],
+      [
+        8,
+        9,
+        10,
+        11
+      ]
+    ],
+    "canonical_row_group": 2,
+    "virtual_array_size": 9,
+    "covariance_mode": "ss_then_lrmc",
+    "use_lrmc": true,
+    "lrmc_rank": 3,
+    "lrmc_solver": "svd",
+    "lrmc_init_strategy": "lag",
+    "lrmc_postprocessing": "none",
+    "lrmc_enforce_toeplitz": false,
+    "lrmc_max_iter": 100,
+    "lrmc_tol": 1e-06,
+    "lrmc_epsilon": 1e-08,
+    "subspacenet_backbone_kernel_size": 2,
+    "ss_fusion_branch_subsets": [
+      [
+        0,
+        1
+      ],
+      [
+        0,
+        2
+      ],
+      [
+        1,
+        2
+      ]
+    ],
+    "ss_fusion_hidden_channels": 16,
+    "ss_fusion_diagonal_loading": 1e-06,
+    "ss_num_subarrays": 3,
+    "ss_row_subset": [
+      0,
+      1,
+      2
+    ]
+  },
+  "model": {
+    "model_type": "SubspaceNet",
+    "tau": 8,
+    "diff_method": "esprit"
+  },
+  "dataset": {
+    "samples_size": 45000,
+    "train_test_ratio": 0.1,
+    "mixed_dataset": {
+      "stratified_cells": [
+        {
+          "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase6_groupb_1p9_coherent_fixed_gap_snr_grid\\phase6_groupb_1p9_coherent_subspacenet_esprit_gap1_snr1.json",
+          "coherence_key": "coherent",
+          "gap_deg": 1,
+          "snr_db": 1,
+          "total_samples": 844
+        },
+        {
+          "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase6_groupb_1p9_noncoherent_fixed_gap_snr_grid\\phase6_groupb_1p9_noncoherent_subspacenet_esprit_gap1_snr1.json",
+          "coherence_key": "noncoherent",
+          "gap_deg": 1,
+          "snr_db": 1,
+          "total_samples": 563
+        },
+        {
+          "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase6_groupb_1p9_coherent_fixed_gap_snr_grid\\phase6_groupb_1p9_coherent_subspacenet_esprit_gap1_snr5.json",
+          "coherence_key": "coherent",
+          "gap_deg": 1,
+          "snr_db": 5,
+          "total_samples": 844
+        },
+        {
+          "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase6_groupb_1p9_noncoherent_fixed_gap_snr_grid\\phase6_groupb_1p9_noncoherent_subspacenet_esprit_gap1_snr5.json",
+          "coherence_key": "noncoherent",
+          "gap_deg": 1,
+          "snr_db": 5,
+          "total_samples": 563
+        },
+        {
+          "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase6_groupb_1p9_coherent_fixed_gap_snr_grid\\phase6_groupb_1p9_coherent_subspacenet_esprit_gap1_snr10.json",
+          "coherence_key": "coherent",
+          "gap_deg": 1,
+          "snr_db": 10,
+          "total_samples": 844
+        },
+        {
+          "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase6_groupb_1p9_noncoherent_fixed_gap_snr_grid\\phase6_groupb_1p9_noncoherent_subspacenet_esprit_gap1_snr10.json",
+          "coherence_key": "noncoherent",
+          "gap_deg": 1,
+          "snr_db": 10,
+          "total_samples": 562
+        },
+        {
+          "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase6_groupb_1p9_coherent_fixed_gap_snr_grid\\phase6_groupb_1p9_coherent_subspacenet_esprit_gap1_snr15.json",
+          "coherence_key": "coherent",
+          "gap_deg": 1,
+          "snr_db": 15,
+          "total_samples": 843
+        },
+        {
+          "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase6_groupb_1p9_noncoherent_fixed_gap_snr_grid\\phase6_groupb_1p9_noncoherent_subspacenet_esprit_gap1_snr15.json",
+          "coherence_key": "noncoherent",
+          "gap_deg": 1,
+          "snr_db": 15,
+          "total_samples": 562
+        },
+        {
+          "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase6_groupb_1p9_coherent_fixed_gap_snr_grid\\phase6_groupb_1p9_coherent_subspacenet_esprit_gap2_snr1.json",
+          "coherence_key": "coherent",
+          "gap_deg": 2,
+          "snr_db": 1,
+          "total_samples": 1182
+        },
+        {
+          "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase6_groupb_1p9_noncoherent_fixed_gap_snr_grid\\phase6_groupb_1p9_noncoherent_subspacenet_esprit_gap2_snr1.json",
+          "coherence_key": "noncoherent",
+          "gap_deg": 2,
+          "snr_db": 1,
+          "total_samples": 675
+        },
+        {
+          "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase6_groupb_1p9_coherent_fixed_gap_snr_grid\\phase6_groupb_1p9_coherent_subspacenet_esprit_gap2_snr5.json",
+          "coherence_key": "coherent",
+          "gap_deg": 2,
+          "snr_db": 5,
+          "total_samples": 1181
+        },
+        {
+          "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase6_groupb_1p9_noncoherent_fixed_gap_snr_grid\\phase6_groupb_1p9_noncoherent_subspacenet_esprit_gap2_snr5.json",
+          "coherence_key": "noncoherent",
+          "gap_deg": 2,
+          "snr_db": 5,
+          "total_samples": 675
+        },
+        {
+          "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase6_groupb_1p9_coherent_fixed_gap_snr_grid\\phase6_groupb_1p9_coherent_subspacenet_esprit_gap2_snr10.json",
+          "coherence_key": "coherent",
+          "gap_deg": 2,
+          "snr_db": 10,
+          "total_samples": 1181
+        },
+        {
+          "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase6_groupb_1p9_noncoherent_fixed_gap_snr_grid\\phase6_groupb_1p9_noncoherent_subspacenet_esprit_gap2_snr10.json",
+          "coherence_key": "noncoherent",
+          "gap_deg": 2,
+          "snr_db": 10,
+          "total_samples": 675
+        },
+        {
+          "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase6_groupb_1p9_coherent_fixed_gap_snr_grid\\phase6_groupb_1p9_coherent_subspacenet_esprit_gap2_snr15.json",
+          "coherence_key": "coherent",
+          "gap_deg": 2,
+          "snr_db": 15,
+          "total_samples": 1181
+        },
+        {
+          "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase6_groupb_1p9_noncoherent_fixed_gap_snr_grid\\phase6_groupb_1p9_noncoherent_subspacenet_esprit_gap2_snr15.json",
+          "coherence_key": "noncoherent",
+          "gap_deg": 2,
+          "snr_db": 15,
+          "total_samples": 675
+        },
+        {
+          "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase6_groupb_1p9_coherent_fixed_gap_snr_grid\\phase6_groupb_1p9_coherent_subspacenet_esprit_gap3_snr1.json",
+          "coherence_key": "coherent",
+          "gap_deg": 3,
+          "snr_db": 1,
+          "total_samples": 675
+        },
+        {
+          "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase6_groupb_1p9_noncoherent_fixed_gap_snr_grid\\phase6_groupb_1p9_noncoherent_subspacenet_esprit_gap3_snr1.json",
+          "coherence_key": "noncoherent",
+          "gap_deg": 3,
+          "snr_db": 1,
+          "total_samples": 450
+        },
+        {
+          "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase6_groupb_1p9_coherent_fixed_gap_snr_grid\\phase6_groupb_1p9_coherent_subspacenet_esprit_gap3_snr5.json",
+          "coherence_key": "coherent",
+          "gap_deg": 3,
+          "snr_db": 5,
+          "total_samples": 675
+        },
+        {
+          "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase6_groupb_1p9_noncoherent_fixed_gap_snr_grid\\phase6_groupb_1p9_noncoherent_subspacenet_esprit_gap3_snr5.json",
+          "coherence_key": "noncoherent",
+          "gap_deg": 3,
+          "snr_db": 5,
+          "total_samples": 450
+        },
+        {
+          "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase6_groupb_1p9_coherent_fixed_gap_snr_grid\\phase6_groupb_1p9_coherent_subspacenet_esprit_gap3_snr10.json",
+          "coherence_key": "coherent",
+          "gap_deg": 3,
+          "snr_db": 10,
+          "total_samples": 675
+        },
+        {
+          "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase6_groupb_1p9_noncoherent_fixed_gap_snr_grid\\phase6_groupb_1p9_noncoherent_subspacenet_esprit_gap3_snr10.json",
+          "coherence_key": "noncoherent",
+          "gap_deg": 3,
+          "snr_db": 10,
+          "total_samples": 450
+        },
+        {
+          "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase6_groupb_1p9_coherent_fixed_gap_snr_grid\\phase6_groupb_1p9_coherent_subspacenet_esprit_gap3_snr15.json",
+          "coherence_key": "coherent",
+          "gap_deg": 3,
+          "snr_db": 15,
+          "total_samples": 675
+        },
+        {
+          "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase6_groupb_1p9_noncoherent_fixed_gap_snr_grid\\phase6_groupb_1p9_noncoherent_subspacenet_esprit_gap3_snr15.json",
+          "coherence_key": "noncoherent",
+          "gap_deg": 3,
+          "snr_db": 15,
+          "total_samples": 450
+        },
+        {
+          "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase6_groupb_1p9_coherent_fixed_gap_snr_grid\\phase6_groupb_1p9_coherent_subspacenet_esprit_gap4_snr1.json",
+          "coherence_key": "coherent",
+          "gap_deg": 4,
+          "snr_db": 1,
+          "total_samples": 338
+        },
+        {
+          "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase6_groupb_1p9_noncoherent_fixed_gap_snr_grid\\phase6_groupb_1p9_noncoherent_subspacenet_esprit_gap4_snr1.json",
+          "coherence_key": "noncoherent",
+          "gap_deg": 4,
+          "snr_db": 1,
+          "total_samples": 338
+        },
+        {
+          "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase6_groupb_1p9_coherent_fixed_gap_snr_grid\\phase6_groupb_1p9_coherent_subspacenet_esprit_gap4_snr5.json",
+          "coherence_key": "coherent",
+          "gap_deg": 4,
+          "snr_db": 5,
+          "total_samples": 338
+        },
+        {
+          "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase6_groupb_1p9_noncoherent_fixed_gap_snr_grid\\phase6_groupb_1p9_noncoherent_subspacenet_esprit_gap4_snr5.json",
+          "coherence_key": "noncoherent",
+          "gap_deg": 4,
+          "snr_db": 5,
+          "total_samples": 338
+        },
+        {
+          "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase6_groupb_1p9_coherent_fixed_gap_snr_grid\\phase6_groupb_1p9_coherent_subspacenet_esprit_gap4_snr10.json",
+          "coherence_key": "coherent",
+          "gap_deg": 4,
+          "snr_db": 10,
+          "total_samples": 337
+        },
+        {
+          "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase6_groupb_1p9_noncoherent_fixed_gap_snr_grid\\phase6_groupb_1p9_noncoherent_subspacenet_esprit_gap4_snr10.json",
+          "coherence_key": "noncoherent",
+          "gap_deg": 4,
+          "snr_db": 10,
+          "total_samples": 337
+        },
+        {
+          "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase6_groupb_1p9_coherent_fixed_gap_snr_grid\\phase6_groupb_1p9_coherent_subspacenet_esprit_gap4_snr15.json",
+          "coherence_key": "coherent",
+          "gap_deg": 4,
+          "snr_db": 15,
+          "total_samples": 337
+        },
+        {
+          "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase6_groupb_1p9_noncoherent_fixed_gap_snr_grid\\phase6_groupb_1p9_noncoherent_subspacenet_esprit_gap4_snr15.json",
+          "coherence_key": "noncoherent",
+          "gap_deg": 4,
+          "snr_db": 15,
+          "total_samples": 337
+        },
+        {
+          "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase6_groupb_1p9_coherent_fixed_gap_snr_grid\\phase6_groupb_1p9_coherent_subspacenet_esprit_gap5_snr1.json",
+          "coherence_key": "coherent",
+          "gap_deg": 5,
+          "snr_db": 1,
+          "total_samples": 338
+        },
+        {
+          "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase6_groupb_1p9_noncoherent_fixed_gap_snr_grid\\phase6_groupb_1p9_noncoherent_subspacenet_esprit_gap5_snr1.json",
+          "coherence_key": "noncoherent",
+          "gap_deg": 5,
+          "snr_db": 1,
+          "total_samples": 225
+        },
+        {
+          "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase6_groupb_1p9_coherent_fixed_gap_snr_grid\\phase6_groupb_1p9_coherent_subspacenet_esprit_gap5_snr5.json",
+          "coherence_key": "coherent",
+          "gap_deg": 5,
+          "snr_db": 5,
+          "total_samples": 338
+        },
+        {
+          "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase6_groupb_1p9_noncoherent_fixed_gap_snr_grid\\phase6_groupb_1p9_noncoherent_subspacenet_esprit_gap5_snr5.json",
+          "coherence_key": "noncoherent",
+          "gap_deg": 5,
+          "snr_db": 5,
+          "total_samples": 225
+        },
+        {
+          "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase6_groupb_1p9_coherent_fixed_gap_snr_grid\\phase6_groupb_1p9_coherent_subspacenet_esprit_gap5_snr10.json",
+          "coherence_key": "coherent",
+          "gap_deg": 5,
+          "snr_db": 10,
+          "total_samples": 337
+        },
+        {
+          "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase6_groupb_1p9_noncoherent_fixed_gap_snr_grid\\phase6_groupb_1p9_noncoherent_subspacenet_esprit_gap5_snr10.json",
+          "coherence_key": "noncoherent",
+          "gap_deg": 5,
+          "snr_db": 10,
+          "total_samples": 225
+        },
+        {
+          "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase6_groupb_1p9_coherent_fixed_gap_snr_grid\\phase6_groupb_1p9_coherent_subspacenet_esprit_gap5_snr15.json",
+          "coherence_key": "coherent",
+          "gap_deg": 5,
+          "snr_db": 15,
+          "total_samples": 337
+        },
+        {
+          "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase6_groupb_1p9_noncoherent_fixed_gap_snr_grid\\phase6_groupb_1p9_noncoherent_subspacenet_esprit_gap5_snr15.json",
+          "coherence_key": "noncoherent",
+          "gap_deg": 5,
+          "snr_db": 15,
+          "total_samples": 225
+        }
+      ],
+      "weighted_random": {
+        "total_samples": 22500,
+        "coherence_weights": {
+          "coherent": 0.6,
+          "noncoherent": 0.4
+        },
+        "snr_weights": {
+          "1": 0.35,
+          "5": 0.3,
+          "10": 0.2,
+          "15": 0.15
+        },
+        "coherent_gap_group_weights": [
+          {
+            "gaps": [
+              1.0,
+              2.0
+            ],
+            "weight": 0.35
+          },
+          {
+            "gaps": [
+              2.0,
+              3.0
+            ],
+            "weight": 0.25
+          },
+          {
+            "gaps": [
+              3.0,
+              5.0
+            ],
+            "weight": 0.2
+          },
+          {
+            "gaps": [
+              5.0,
+              10.0
+            ],
+            "weight": 0.1
+          },
+          {
+            "gaps": [
+              10.0,
+              29.0
+            ],
+            "weight": 0.1
+          }
+        ],
+        "noncoherent_gap_group_weights": [
+          {
+            "gaps": [
+              1.0,
+              2.0
+            ],
+            "weight": 0.3
+          },
+          {
+            "gaps": [
+              2.0,
+              3.0
+            ],
+            "weight": 0.25
+          },
+          {
+            "gaps": [
+              3.0,
+              5.0
+            ],
+            "weight": 0.2
+          },
+          {
+            "gaps": [
+              5.0,
+              10.0
+            ],
+            "weight": 0.15
+          },
+          {
+            "gaps": [
+              10.0,
+              29.0
+            ],
+            "weight": 0.1
+          }
+        ],
+        "gap_group_weights": [
+          {
+            "gaps": [
+              1.0,
+              2.0
+            ],
+            "weight": 0.33
+          },
+          {
+            "gaps": [
+              2.0,
+              3.0
+            ],
+            "weight": 0.25
+          },
+          {
+            "gaps": [
+              3.0,
+              5.0
+            ],
+            "weight": 0.2
+          },
+          {
+            "gaps": [
+              5.0,
+              10.0
+            ],
+            "weight": 0.12
+          },
+          {
+            "gaps": [
+              10.0,
+              29.0
+            ],
+            "weight": 0.1
+          }
+        ]
+      }
+    }
+  },
+  "training": {
+    "batch_size": 256,
+    "validation_batch_size": 512,
+    "num_workers": 8,
+    "pin_memory": true,
+    "persistent_workers": true,
+    "epochs": 80,
+    "learning_rate": 1e-05,
+    "weight_decay": 1e-09,
+    "scheduler_step_size": 40,
+    "scheduler_gamma": 0.5,
+    "prefetch_factor": 4
+  },
+  "report": {
+    "markdown_output": "",
+    "markdown_title": "Phase 7D - Group B 1.9 Lambda SS-Fusion Activation Ablation",
+    "markdown_description": "Phase 7D runs a single controlled activation ablation in the primary coherent hard cell by replacing the spatial SS-fusion block's ReLU activations with a width-controlled anti-rectifier while keeping the Phase 7C 3x3 backbone setting.",
+    "markdown_conditions": [
+      "Array: Group B 12-channel 2D hardware geometry",
+      "Physical spacing: 1.9 lambda",
+      "Signals: 2 coherent narrowband targets",
+      "Cell: gap = 1 deg, SNR = 1 dB, T = 40",
+      "Azimuth and elevation range: [-15 deg, 15 deg]",
+      "Training scale: 45,000 samples total with 9,000 test samples",
+      "Learned head: ESPRIT",
+      "Controlled variable: fusion-block activation design only",
+      "Fusion variant: width-controlled anti-rectifier spatial fusion",
+      "Backbone: SubspaceNet 3x3",
+      "Metric: horizontal-angle RMSE in degrees (periodic matching)"
+    ],
+    "write_summary_csv": false,
+    "markdown_scheme_label": "Coherent | Gap = 1 deg | SNR = 1 dB | SS(2/3 x 3) -> LRMC -> anti-rectifier learned fusion -> SubspaceNet backbone 3x3"
+  },
+  "template_name": "phase7j_gb19_modela_randomgap_45k",
+  "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase7g_groupb_1p9_boundary_2deg_repair\\phase7g_gb19_boundary2deg_repair_stage08_45k.json"
+}
