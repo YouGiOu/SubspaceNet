@@ -1,0 +1,7 @@
+{
+  "checkpoint_path": "D:\\workspace1\\SubspaceNet\\results\\phase7i_groupb_1p9_random_gap_training\\phase7i_gb19_randomgap_stage03_45k\\esprit\\checkpoints\\SubspaceNetSSFusionAntiRectEspritPhase7d_M=2_T=40_SNR_1_tau=8_NarrowBand_diff_method=esprit_coherent_eta=0_bias=0_tpl=phase7i_gb19_randomgap_stage03_45k_d75d1d589d75_sv_noise=0",
+  "source_train_rmse_deg": 1.0185175681161707,
+  "reference_anchor_rmse_deg": 0.35922418587611504,
+  "source_template_name": "phase7i_gb19_randomgap_stage03_45k",
+  "source_model_type": "SubspaceNetSSFusionAntiRectEspritPhase7d"
+}

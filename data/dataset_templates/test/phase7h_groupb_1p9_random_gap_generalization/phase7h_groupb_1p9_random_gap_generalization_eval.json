@@ -1,0 +1,157 @@
+{
+  "description": "Phase 7H evaluates the Phase 7G boundary-repair model on newly generated random-gap coherent and non-coherent Group B test datasets.",
+  "experiment_type": "subspacenet_transfer_test",
+  "seed": 42,
+  "commands": {
+    "GENERATE_MISSING_DATA": true,
+    "SAVE_GENERATED_DATA": true
+  },
+  "source_model": {
+    "experiment_dir": "results/phase7g_groupb_1p9_boundary_2deg_repair/phase7g_gb19_boundary2deg_repair_stage08_45k",
+    "method_name": "esprit",
+    "reference_rmse_deg": 0.35922418587611504
+  },
+  "evaluation_cells": [
+    {
+      "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase7h_groupb_1p9_random_gap_generalization_support\\phase7h_gb19_coh_randomgap_s1.json",
+      "result_name": "phase7h_gb19_coh_randomgap_s1",
+      "method_name": "esprit",
+      "coherence_key": "coherent",
+      "coherence_label": "coherent",
+      "gap_deg": null,
+      "snr_db": 1,
+      "split": "coherent_random_gap",
+      "bucket_labels": [
+        "random_gap_generalization",
+        "coherent_random_gap"
+      ],
+      "retention_priority": false
+    },
+    {
+      "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase7h_groupb_1p9_random_gap_generalization_support\\phase7h_gb19_coh_randomgap_s5.json",
+      "result_name": "phase7h_gb19_coh_randomgap_s5",
+      "method_name": "esprit",
+      "coherence_key": "coherent",
+      "coherence_label": "coherent",
+      "gap_deg": null,
+      "snr_db": 5,
+      "split": "coherent_random_gap",
+      "bucket_labels": [
+        "random_gap_generalization",
+        "coherent_random_gap"
+      ],
+      "retention_priority": false
+    },
+    {
+      "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase7h_groupb_1p9_random_gap_generalization_support\\phase7h_gb19_coh_randomgap_s10.json",
+      "result_name": "phase7h_gb19_coh_randomgap_s10",
+      "method_name": "esprit",
+      "coherence_key": "coherent",
+      "coherence_label": "coherent",
+      "gap_deg": null,
+      "snr_db": 10,
+      "split": "coherent_random_gap",
+      "bucket_labels": [
+        "random_gap_generalization",
+        "coherent_random_gap"
+      ],
+      "retention_priority": false
+    },
+    {
+      "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase7h_groupb_1p9_random_gap_generalization_support\\phase7h_gb19_coh_randomgap_s15.json",
+      "result_name": "phase7h_gb19_coh_randomgap_s15",
+      "method_name": "esprit",
+      "coherence_key": "coherent",
+      "coherence_label": "coherent",
+      "gap_deg": null,
+      "snr_db": 15,
+      "split": "coherent_random_gap",
+      "bucket_labels": [
+        "random_gap_generalization",
+        "coherent_random_gap"
+      ],
+      "retention_priority": false
+    },
+    {
+      "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase7h_groupb_1p9_random_gap_generalization_support\\phase7h_gb19_noncoh_randomgap_s1.json",
+      "result_name": "phase7h_gb19_noncoh_randomgap_s1",
+      "method_name": "esprit",
+      "coherence_key": "noncoherent",
+      "coherence_label": "non-coherent",
+      "gap_deg": null,
+      "snr_db": 1,
+      "split": "noncoherent_random_gap",
+      "bucket_labels": [
+        "random_gap_generalization",
+        "noncoherent_random_gap"
+      ],
+      "retention_priority": false
+    },
+    {
+      "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase7h_groupb_1p9_random_gap_generalization_support\\phase7h_gb19_noncoh_randomgap_s5.json",
+      "result_name": "phase7h_gb19_noncoh_randomgap_s5",
+      "method_name": "esprit",
+      "coherence_key": "noncoherent",
+      "coherence_label": "non-coherent",
+      "gap_deg": null,
+      "snr_db": 5,
+      "split": "noncoherent_random_gap",
+      "bucket_labels": [
+        "random_gap_generalization",
+        "noncoherent_random_gap"
+      ],
+      "retention_priority": false
+    },
+    {
+      "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase7h_groupb_1p9_random_gap_generalization_support\\phase7h_gb19_noncoh_randomgap_s10.json",
+      "result_name": "phase7h_gb19_noncoh_randomgap_s10",
+      "method_name": "esprit",
+      "coherence_key": "noncoherent",
+      "coherence_label": "non-coherent",
+      "gap_deg": null,
+      "snr_db": 10,
+      "split": "noncoherent_random_gap",
+      "bucket_labels": [
+        "random_gap_generalization",
+        "noncoherent_random_gap"
+      ],
+      "retention_priority": false
+    },
+    {
+      "template_path": "D:\\workspace1\\SubspaceNet\\data\\dataset_templates\\ablation\\phase7h_groupb_1p9_random_gap_generalization_support\\phase7h_gb19_noncoh_randomgap_s15.json",
+      "result_name": "phase7h_gb19_noncoh_randomgap_s15",
+      "method_name": "esprit",
+      "coherence_key": "noncoherent",
+      "coherence_label": "non-coherent",
+      "gap_deg": null,
+      "snr_db": 15,
+      "split": "noncoherent_random_gap",
+      "bucket_labels": [
+        "random_gap_generalization",
+        "noncoherent_random_gap"
+      ],
+      "retention_priority": false
+    }
+  ],
+  "report": {
+    "flat_results_root": true,
+    "write_summary_csv": true,
+    "markdown_output": "phase7h_groupb_1p9_random_gap_generalization_results.md",
+    "markdown_title": "Phase 7H - Group B 1.9 Lambda Random-Gap Generalization",
+    "markdown_description": "Phase 7H evaluates the Phase 7G boundary-repair anti-rectifier fusion model on newly generated random-gap test sets so the angular separation is continuous rather than locked to the earlier fixed-gap grid.",
+    "markdown_conditions": [
+      "Array: Group B 12-channel 2D hardware geometry",
+      "Physical spacing: 1.9 lambda",
+      "Model family: SS(2/3 x 3) -> LRMC -> width-controlled anti-rectifier spatial fusion -> SubspaceNet backbone 3x3 -> ESPRIT",
+      "Checkpoint under test: best Phase 7G boundary-repair model",
+      "Evaluation distribution: random azimuth gaps inside [-15 deg, 15 deg]",
+      "Gap rule: min_doa_gap = 1 deg, with no fixed_doa_gap constraint",
+      "Snapshots: T = 40",
+      "Test sample count: 9,000 per dataset",
+      "Primary metric: horizontal-angle RMSE in degrees",
+      "Extra reporting: realized random-gap distribution summary per dataset"
+    ],
+    "random_gap_mode": true
+  },
+  "template_name": "phase7h_groupb_1p9_random_gap_generalization_eval"
+}

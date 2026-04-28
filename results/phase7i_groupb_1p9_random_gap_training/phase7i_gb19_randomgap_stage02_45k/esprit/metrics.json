@@ -1,0 +1,42 @@
+{
+  "template_name": "phase7i_gb19_randomgap_stage02_45k",
+  "method_name": "esprit",
+  "rmse_deg": 0.9671977622337254,
+  "seed": 43,
+  "loss_measure": "rmse_deg",
+  "train_loss": [
+    0.020689523967391966,
+    0.020511017473117205,
+    0.020266598713968673,
+    0.02018090717414197,
+    0.02009120409216081,
+    0.01993000196921742,
+    0.01990464907985813,
+    0.019776504652624784,
+    0.019766968606476146,
+    0.01966723983161264
+  ],
+  "valid_loss": [
+    0.01783454231433131,
+    0.017696337735054777,
+    0.01755352167749526,
+    0.017471309538316097,
+    0.017337542782921673,
+    0.017312068272605192,
+    0.01717943307514281,
+    0.017140479792538386,
+    0.017133510746052724,
+    0.0170614819701389
+  ],
+  "checkpoint_dir": "D:\\workspace1\\SubspaceNet\\results\\phase7i_groupb_1p9_random_gap_training\\phase7i_gb19_randomgap_stage02_45k\\esprit\\checkpoints",
+  "pretrained_checkpoint_path": "D:\\workspace1\\SubspaceNet\\results\\phase7i_groupb_1p9_random_gap_training\\phase7i_gb19_randomgap_stage01_45k\\esprit\\checkpoints\\SubspaceNetSSFusionAntiRectEspritPhase7d_M=2_T=40_SNR_1_tau=8_NarrowBand_diff_method=esprit_coherent_eta=0_bias=0_tpl=phase7i_gb19_randomgap_stage01_45k_b29fafe92ec4_sv_noise=0",
+  "avg_fused_covariance_norm": 603.521240286102,
+  "avg_fused_diagonal_mean_real": -19.834998395394063,
+  "avg_input_branch_norms": [
+    3368.5666135271513,
+    3300.076196342296,
+    3284.986873218824
+  ],
+  "fusion_kernel_type": "3x3_spatial_antirect_width_controlled",
+  "subspacenet_backbone_kernel_size": 3
+}

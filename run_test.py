@@ -124,6 +124,25 @@ def maybe_cuda_synchronize():
         torch.cuda.synchronize()
 
 
+def compute_realized_gap_stats(
+    generic_test_dataset: List[Tuple[torch.Tensor, torch.Tensor]]
+):
+    gap_values = []
+    for _, doa in generic_test_dataset:
+        doa_deg = np.sort(np.asarray(doa, dtype=float) * R2D)
+        if doa_deg.size >= 2:
+            gap_values.append(float(abs(doa_deg[1] - doa_deg[0])))
+    if not gap_values:
+        return {}
+    gap_array = np.asarray(gap_values, dtype=float)
+    return {
+        "realized_mean_gap_deg": float(np.mean(gap_array)),
+        "realized_median_gap_deg": float(np.median(gap_array)),
+        "realized_min_gap_deg": float(np.min(gap_array)),
+        "realized_max_gap_deg": float(np.max(gap_array)),
+    }
+
+
 def parse_reference_summary(path: Path):
     by_scheme: Dict[str, List[Dict[str, object]]] = {}
     with path.open("r", encoding="utf-8") as handle:
@@ -398,6 +417,15 @@ def build_bucket_summary(rows: List[Dict]):
     return bucket_rows
 
 
+def row_gap_sort_value(row: Dict):
+    gap = row.get("gap_deg")
+    return float(gap) if gap is not None else 999.0
+
+
+def row_sort_key(row: Dict):
+    return (row.get("coherence", ""), row_gap_sort_value(row), row.get("snr_db", 0))
+
+
 def write_summary_csv(rows: List[Dict], output_path: Path):
     fieldnames = [
         "scheme",
@@ -415,6 +443,10 @@ def write_summary_csv(rows: List[Dict], output_path: Path):
         "avg_forward_runtime_sec",
         "dataset_pass_runtime_sec",
         "num_test_samples",
+        "realized_mean_gap_deg",
+        "realized_median_gap_deg",
+        "realized_min_gap_deg",
+        "realized_max_gap_deg",
         "delta_vs_source_train_cell_rmse_deg",
         "phase6_classical_best_method",
         "phase6_classical_best_rmse_deg",
@@ -425,6 +457,10 @@ def write_summary_csv(rows: List[Dict], output_path: Path):
         "delta_vs_phase7e_reference_rmse_deg",
         "phase7f_reference_rmse_deg",
         "delta_vs_phase7f_reference_rmse_deg",
+        "phase7g_reference_rmse_deg",
+        "delta_vs_phase7g_reference_rmse_deg",
+        "phase7h_reference_rmse_deg",
+        "delta_vs_phase7h_reference_rmse_deg",
     ]
     with output_path.open("w", encoding="utf-8", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=fieldnames)
@@ -463,10 +499,257 @@ def write_transfer_markdown(
     report: Dict,
     source_train_rmse: float,
 ):
+    if report.get("hybrid_random_gap_mode", False):
+        fixed_rows = [row for row in rows if row.get("gap_deg") is not None]
+        random_rows = [row for row in rows if row.get("gap_deg") is None]
+        coherent_fixed_rows = [
+            row for row in fixed_rows if row.get("coherence") == "coherent"
+        ]
+        noncoherent_fixed_rows = [
+            row for row in fixed_rows if row.get("coherence") == "non-coherent"
+        ]
+        coherent_random_rows = [
+            row for row in random_rows if row.get("coherence") == "coherent"
+        ]
+        noncoherent_random_rows = [
+            row for row in random_rows if row.get("coherence") == "non-coherent"
+        ]
+        coherent_fixed_rows.sort(key=row_sort_key)
+        noncoherent_fixed_rows.sort(key=row_sort_key)
+        coherent_random_rows.sort(key=lambda row: row.get("snr_db", 0))
+        noncoherent_random_rows.sort(key=lambda row: row.get("snr_db", 0))
+
+        lines = [f"# {report.get('markdown_title', 'Transfer Test Results')}", ""]
+        description = report.get("markdown_description", "")
+        if description:
+            lines.extend([description, ""])
+        conditions = report.get("markdown_conditions", [])
+        if conditions:
+            lines.append("Experimental conditions:")
+            for condition in conditions:
+                lines.append(f"- {condition}")
+            lines.append("")
+        lines.append(f"Reference anchor RMSE: `{source_train_rmse:.4f} deg`")
+        lines.append("")
+
+        random_gap_rows = [
+            row for row in random_rows if row.get("phase7h_reference_rmse_deg") is not None
+        ]
+        if random_gap_rows:
+            lines.append("## Random-Gap Comparison")
+            lines.append("")
+            lines.append("| Coherence | SNR (dB) | Phase 7H RMSE (deg) | Phase 7I RMSE (deg) | Delta vs Phase 7H |")
+            lines.append("| --- | ---: | ---: | ---: | ---: |")
+            for row in sorted(random_gap_rows, key=row_sort_key):
+                phase7h_text = f"{row['phase7h_reference_rmse_deg']:.4f}"
+                delta_phase7h_text = f"{row['delta_vs_phase7h_reference_rmse_deg']:+.4f}"
+                lines.append(
+                    f"| {row.get('coherence', 'unknown')} | {row.get('snr_db', '')} | {phase7h_text} | {row['rmse_deg']:.4f} | {delta_phase7h_text} |"
+                )
+            lines.append("")
+
+        coherent_2deg_rows = [
+            row
+            for row in coherent_fixed_rows
+            if int(row.get("gap_deg", 0)) == 2
+            and row.get("phase7g_reference_rmse_deg") is not None
+        ]
+        if coherent_2deg_rows:
+            lines.append("## Coherent 2-Degree Protection")
+            lines.append("")
+            lines.append("| SNR (dB) | Phase 7G RMSE (deg) | Phase 7I RMSE (deg) | Delta vs Phase 7G |")
+            lines.append("| ---: | ---: | ---: | ---: |")
+            for row in coherent_2deg_rows:
+                lines.append(
+                    f"| {row.get('snr_db', '')} | {row['phase7g_reference_rmse_deg']:.4f} | {row['rmse_deg']:.4f} | {row['delta_vs_phase7g_reference_rmse_deg']:+.4f} |"
+                )
+            lines.append("")
+
+        retention_rows = [
+            row
+            for row in fixed_rows
+            if row.get("split") == "in_domain_anchor"
+            or bool(row.get("retention_priority"))
+        ]
+        if retention_rows:
+            lines.append("## Source-Cell Retention")
+            lines.append("")
+            lines.append("| Cell | Phase 7F | Phase 7G | Phase 7I | Delta vs Phase 7G |")
+            lines.append("| --- | ---: | ---: | ---: | ---: |")
+            for row in sorted(retention_rows, key=row_sort_key):
+                cell_label = (
+                    f"{row.get('coherence', 'unknown')} | gap {row.get('gap_deg', '?')} | snr {row.get('snr_db', '?')}"
+                )
+                phase7f_text = (
+                    f"{row['phase7f_reference_rmse_deg']:.4f}"
+                    if row.get("phase7f_reference_rmse_deg") is not None
+                    else "missing"
+                )
+                phase7g_text = (
+                    f"{row['phase7g_reference_rmse_deg']:.4f}"
+                    if row.get("phase7g_reference_rmse_deg") is not None
+                    else "missing"
+                )
+                delta_phase7g_text = (
+                    f"{row['delta_vs_phase7g_reference_rmse_deg']:+.4f}"
+                    if row.get("delta_vs_phase7g_reference_rmse_deg") is not None
+                    else "missing"
+                )
+                lines.append(
+                    f"| {cell_label} | {phase7f_text} | {phase7g_text} | {row['rmse_deg']:.4f} | {delta_phase7g_text} |"
+                )
+            lines.append("")
+
+        if coherent_fixed_rows:
+            lines.append("## Coherent Fixed-Gap Grid")
+            lines.append("")
+            lines.append("| Gap (deg) | SNR (dB) | RMSE (deg) | Delta vs Phase 7G | Delta vs Phase 7F | Avg runtime / sample (s) |")
+            lines.append("| ---: | ---: | ---: | ---: | ---: | ---: |")
+            for row in coherent_fixed_rows:
+                lines.append(
+                    f"| {row.get('gap_deg', '')} | {row.get('snr_db', '')} | {row['rmse_deg']:.4f} | "
+                    f"{format_float(row.get('delta_vs_phase7g_reference_rmse_deg')) if row.get('delta_vs_phase7g_reference_rmse_deg') is not None else 'missing'} | "
+                    f"{format_float(row.get('delta_vs_phase7f_reference_rmse_deg')) if row.get('delta_vs_phase7f_reference_rmse_deg') is not None else 'missing'} | "
+                    f"{row['avg_runtime_sec']:.6f} |"
+                )
+            lines.append("")
+
+        if noncoherent_fixed_rows:
+            lines.append("## Non-Coherent Fixed-Gap Grid")
+            lines.append("")
+            lines.append("| Gap (deg) | SNR (dB) | RMSE (deg) | Delta vs Phase 7G | Delta vs Phase 7F | Avg runtime / sample (s) |")
+            lines.append("| ---: | ---: | ---: | ---: | ---: | ---: |")
+            for row in noncoherent_fixed_rows:
+                lines.append(
+                    f"| {row.get('gap_deg', '')} | {row.get('snr_db', '')} | {row['rmse_deg']:.4f} | "
+                    f"{format_float(row.get('delta_vs_phase7g_reference_rmse_deg')) if row.get('delta_vs_phase7g_reference_rmse_deg') is not None else 'missing'} | "
+                    f"{format_float(row.get('delta_vs_phase7f_reference_rmse_deg')) if row.get('delta_vs_phase7f_reference_rmse_deg') is not None else 'missing'} | "
+                    f"{row['avg_runtime_sec']:.6f} |"
+                )
+            lines.append("")
+
+        if coherent_random_rows:
+            lines.append("## Coherent Random-Gap Table")
+            lines.append("")
+            lines.append(
+                "| SNR (dB) | Phase 7H RMSE (deg) | Phase 7I RMSE (deg) | Delta vs Phase 7H | Mean gap (deg) | Median gap (deg) | Min gap (deg) | Max gap (deg) |"
+            )
+            lines.append("| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |")
+            for row in coherent_random_rows:
+                lines.append(
+                    f"| {row.get('snr_db', '')} | {format_float(row.get('phase7h_reference_rmse_deg')) if row.get('phase7h_reference_rmse_deg') is not None else 'missing'} | {row['rmse_deg']:.4f} | "
+                    f"{format_float(row.get('delta_vs_phase7h_reference_rmse_deg')) if row.get('delta_vs_phase7h_reference_rmse_deg') is not None else 'missing'} | "
+                    f"{format_float(row.get('realized_mean_gap_deg'))} | {format_float(row.get('realized_median_gap_deg'))} | "
+                    f"{format_float(row.get('realized_min_gap_deg'))} | {format_float(row.get('realized_max_gap_deg'))} |"
+                )
+            lines.append("")
+
+        if noncoherent_random_rows:
+            lines.append("## Non-Coherent Random-Gap Table")
+            lines.append("")
+            lines.append(
+                "| SNR (dB) | Phase 7H RMSE (deg) | Phase 7I RMSE (deg) | Delta vs Phase 7H | Mean gap (deg) | Median gap (deg) | Min gap (deg) | Max gap (deg) |"
+            )
+            lines.append("| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |")
+            for row in noncoherent_random_rows:
+                lines.append(
+                    f"| {row.get('snr_db', '')} | {format_float(row.get('phase7h_reference_rmse_deg')) if row.get('phase7h_reference_rmse_deg') is not None else 'missing'} | {row['rmse_deg']:.4f} | "
+                    f"{format_float(row.get('delta_vs_phase7h_reference_rmse_deg')) if row.get('delta_vs_phase7h_reference_rmse_deg') is not None else 'missing'} | "
+                    f"{format_float(row.get('realized_mean_gap_deg'))} | {format_float(row.get('realized_median_gap_deg'))} | "
+                    f"{format_float(row.get('realized_min_gap_deg'))} | {format_float(row.get('realized_max_gap_deg'))} |"
+                )
+            lines.append("")
+
+        lines.append("## Bucket Summary")
+        lines.append("")
+        lines.append(
+            "| Bucket | Cells | Mean RMSE (deg) | Median RMSE (deg) | Best RMSE (deg) | Worst RMSE (deg) | Mean runtime / sample (s) |"
+        )
+        lines.append("| --- | ---: | ---: | ---: | ---: | ---: | ---: |")
+        for row in bucket_rows:
+            lines.append(
+                f"| {row['bucket_name']} | {row['num_cells']} | {row['mean_rmse_deg']:.4f} | "
+                f"{row['median_rmse_deg']:.4f} | {row['best_rmse_deg']:.4f} | "
+                f"{row['worst_rmse_deg']:.4f} | {row['mean_runtime_sec']:.6f} |"
+            )
+        output_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        return
+
+    if report.get("random_gap_mode", False):
+        coherent_rows = [row for row in rows if row.get("coherence") == "coherent"]
+        noncoherent_rows = [
+            row for row in rows if row.get("coherence") == "non-coherent"
+        ]
+        coherent_rows.sort(key=lambda row: row.get("snr_db", 0))
+        noncoherent_rows.sort(key=lambda row: row.get("snr_db", 0))
+
+        lines = [f"# {report.get('markdown_title', 'Transfer Test Results')}", ""]
+        description = report.get("markdown_description", "")
+        if description:
+            lines.extend([description, ""])
+        conditions = report.get("markdown_conditions", [])
+        if conditions:
+            lines.append("Experimental conditions:")
+            for condition in conditions:
+                lines.append(f"- {condition}")
+            lines.append("")
+        lines.append(f"Reference anchor RMSE: `{source_train_rmse:.4f} deg`")
+        lines.append("")
+
+        if coherent_rows:
+            lines.append("## Coherent Random-Gap Table")
+            lines.append("")
+            lines.append(
+                "| SNR (dB) | RMSE (deg) | Avg runtime / sample (s) | Mean gap (deg) | Median gap (deg) | Min gap (deg) | Max gap (deg) | Samples |"
+            )
+            lines.append(
+                "| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |"
+            )
+            for row in coherent_rows:
+                lines.append(
+                    f"| {row.get('snr_db', '')} | {row['rmse_deg']:.4f} | {row['avg_runtime_sec']:.6f} | "
+                    f"{format_float(row.get('realized_mean_gap_deg'))} | {format_float(row.get('realized_median_gap_deg'))} | "
+                    f"{format_float(row.get('realized_min_gap_deg'))} | {format_float(row.get('realized_max_gap_deg'))} | "
+                    f"{row.get('num_test_samples', '')} |"
+                )
+            lines.append("")
+
+        if noncoherent_rows:
+            lines.append("## Non-Coherent Random-Gap Table")
+            lines.append("")
+            lines.append(
+                "| SNR (dB) | RMSE (deg) | Avg runtime / sample (s) | Mean gap (deg) | Median gap (deg) | Min gap (deg) | Max gap (deg) | Samples |"
+            )
+            lines.append(
+                "| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |"
+            )
+            for row in noncoherent_rows:
+                lines.append(
+                    f"| {row.get('snr_db', '')} | {row['rmse_deg']:.4f} | {row['avg_runtime_sec']:.6f} | "
+                    f"{format_float(row.get('realized_mean_gap_deg'))} | {format_float(row.get('realized_median_gap_deg'))} | "
+                    f"{format_float(row.get('realized_min_gap_deg'))} | {format_float(row.get('realized_max_gap_deg'))} | "
+                    f"{row.get('num_test_samples', '')} |"
+                )
+            lines.append("")
+
+        lines.extend(["## Bucket Summary", ""])
+        lines.append(
+            "| Bucket | Cells | Mean RMSE (deg) | Median RMSE (deg) | Best RMSE (deg) | Worst RMSE (deg) | Mean runtime / sample (s) |"
+        )
+        lines.append("| --- | ---: | ---: | ---: | ---: | ---: | ---: |")
+        for row in bucket_rows:
+            lines.append(
+                f"| {row['bucket_name']} | {row['num_cells']} | {row['mean_rmse_deg']:.4f} | "
+                f"{row['median_rmse_deg']:.4f} | {row['best_rmse_deg']:.4f} | "
+                f"{row['worst_rmse_deg']:.4f} | {row['mean_runtime_sec']:.6f} |"
+            )
+        output_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        return
+
     coherent_rows = [row for row in rows if row.get("coherence") == "coherent"]
     noncoherent_rows = [row for row in rows if row.get("coherence") == "non-coherent"]
-    coherent_rows.sort(key=lambda row: (row.get("gap_deg", 0), row.get("snr_db", 0)))
-    noncoherent_rows.sort(key=lambda row: (row.get("gap_deg", 0), row.get("snr_db", 0)))
+    coherent_rows.sort(key=row_sort_key)
+    noncoherent_rows.sort(key=row_sort_key)
 
     lines = [f"# {report.get('markdown_title', 'Transfer Test Results')}", ""]
     description = report.get("markdown_description", "")
@@ -568,7 +851,7 @@ def write_transfer_markdown(
     lines.extend(["", "## Comparison Table", ""])
     lines.append("| Cell | Phase 6 classical best | RMSE (deg) | Avg runtime / sample (s) | Delta vs classical best | Direct Phase 6 learned RMSE (deg) | Delta vs direct learned | Phase 7E RMSE (deg) | Delta vs Phase 7E | Phase 7F RMSE (deg) | Delta vs Phase 7F |")
     lines.append("| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |")
-    for row in sorted(rows, key=lambda item: (item.get("coherence", ""), item.get("gap_deg", 0), item.get("snr_db", 0))):
+    for row in sorted(rows, key=row_sort_key):
         cell_label = f"{row.get('coherence', 'unknown')} | gap {row.get('gap_deg', '?')} | snr {row.get('snr_db', '?')}"
         classical_label = (
             f"{row['phase6_classical_best_method']} ({row['phase6_classical_best_rmse_deg']:.4f})"
@@ -677,6 +960,7 @@ def run_subspacenet_transfer_test(repo_root: Path, template: Dict, results_root:
             cell_config=cell_config,
             result_dir=cell_dir,
         )
+        gap_stats = compute_realized_gap_stats(generic_test_dataset)
 
         classical_best_method, classical_best_rmse, direct_learned_rmse = (
             get_reference_metrics(reference_maps, cell_config)
@@ -698,6 +982,22 @@ def run_subspacenet_transfer_test(repo_root: Path, template: Dict, results_root:
                 scheme_name=reference_schemes["phase7f"],
                 method_name=method_name,
             )
+        phase7g_reference_rmse = None
+        if reference_schemes.get("phase7g"):
+            phase7g_reference_rmse = get_named_reference_rmse(
+                reference_maps,
+                summary_key="phase7g",
+                scheme_name=reference_schemes["phase7g"],
+                method_name=method_name,
+            )
+        phase7h_reference_rmse = None
+        if reference_schemes.get("phase7h"):
+            phase7h_reference_rmse = get_named_reference_rmse(
+                reference_maps,
+                summary_key="phase7h",
+                scheme_name=reference_schemes["phase7h"],
+                method_name=method_name,
+            )
         row = {
             "scheme": cell_config["result_name"],
             "method": method_name,
@@ -714,6 +1014,10 @@ def run_subspacenet_transfer_test(repo_root: Path, template: Dict, results_root:
             "avg_forward_runtime_sec": metrics["avg_forward_runtime_sec"],
             "dataset_pass_runtime_sec": metrics["dataset_pass_runtime_sec"],
             "num_test_samples": metrics["num_test_samples"],
+            "realized_mean_gap_deg": gap_stats.get("realized_mean_gap_deg"),
+            "realized_median_gap_deg": gap_stats.get("realized_median_gap_deg"),
+            "realized_min_gap_deg": gap_stats.get("realized_min_gap_deg"),
+            "realized_max_gap_deg": gap_stats.get("realized_max_gap_deg"),
             "delta_vs_source_train_cell_rmse_deg": metrics["rmse_deg"] - reference_anchor_rmse,
             "phase6_classical_best_method": classical_best_method,
             "phase6_classical_best_rmse_deg": classical_best_rmse,
@@ -732,12 +1036,20 @@ def run_subspacenet_transfer_test(repo_root: Path, template: Dict, results_root:
             "delta_vs_phase7f_reference_rmse_deg": (
                 None if phase7f_reference_rmse is None else metrics["rmse_deg"] - phase7f_reference_rmse
             ),
+            "phase7g_reference_rmse_deg": phase7g_reference_rmse,
+            "delta_vs_phase7g_reference_rmse_deg": (
+                None if phase7g_reference_rmse is None else metrics["rmse_deg"] - phase7g_reference_rmse
+            ),
+            "phase7h_reference_rmse_deg": phase7h_reference_rmse,
+            "delta_vs_phase7h_reference_rmse_deg": (
+                None if phase7h_reference_rmse is None else metrics["rmse_deg"] - phase7h_reference_rmse
+            ),
             "retention_priority": bool(cell_config.get("retention_priority", False)),
         }
         save_json(cell_dir / "metrics.json", {**metrics, **row})
         rows.append(row)
 
-    rows.sort(key=lambda row: (row.get("coherence", ""), row.get("gap_deg", 0), row.get("snr_db", 0)))
+    rows.sort(key=row_sort_key)
     bucket_rows = build_bucket_summary(rows)
     if report.get("write_summary_csv", False):
         write_summary_csv(rows, experiment_root / "summary.csv")
